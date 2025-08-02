@@ -41,7 +41,7 @@ void loop() {
   Wire.end();
 
   // Wait until we do it again
-  delay(10000);
+  delay(1000);
 }
 
 void retrieveVoc(uint8_t tempAndHumidityBuffer[6]) {
