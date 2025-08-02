@@ -4,6 +4,10 @@
 const int ledPin = LED_BUILTIN;
 const uint8_t TEMP_SENSOR_ADDRESS = 0x44;
 
+void retrieveSerialNumber();
+void retrieveTemperatureAndHumidity();
+bool retrieveI2cValue(uint8_t address, byte command, byte data[6]);
+
 bool verifyChecksum(byte data[6]);
 bool verifyChecksumPiece(byte data[2], byte checksum);
 byte computeCrc8Simple(byte bytes[2]);
@@ -20,38 +24,9 @@ void loop() {
   // Turn the LED on
   digitalWrite(ledPin, HIGH);
 
-  // Send the request
-  Wire.beginTransmission(TEMP_SENSOR_ADDRESS); // Address of the device
-  byte command[1] = {0x89}; // Command to send
-  Wire.write(command, 1); // Command
-  Wire.endTransmission();
-
-  // Listen for the response
-  delay(1);
-  Wire.requestFrom(TEMP_SENSOR_ADDRESS, 6u);
-  byte serialData[6];
-  byte i = 0;
-  while (Wire.available()) {
-    // Read the byte and store it
-    char c = Wire.read();
-    if (i < 6) {
-      serialData[i] = c;
-      i++;
-    }
-
-    // Output the byte
-    char output[6];
-    sprintf(output, "%02X ", c); // Format it as a hex string
-    Serial.print(output);      // Print it to the Serial Monitor
-  }
-  Serial.println();
-
-  // Check the serial number cheksums
-  if (i == 6 && verifyChecksum(serialData)) {
-    Serial.println("Checksum is valid.");
-  } else {
-    Serial.println("Checksum is invalid.");
-  }
+  // Get the values
+  retrieveSerialNumber();
+  retrieveTemperatureAndHumidity();
 
   // Turn the LED off
   Serial.println();
@@ -59,6 +34,78 @@ void loop() {
 
   // Wait until we do it again
   delay(10000);
+}
+
+void retrieveTemperatureAndHumidity() {
+  byte serialData[6];
+  bool checksumSuccess = retrieveI2cValue(TEMP_SENSOR_ADDRESS, 0xFD, serialData);
+
+  // Check the checksums
+  char temperatureLabel[] = "Temperature: ";
+  char humidityLabel[] = "Humidity: ";
+  
+  // Print out the temperature and humidity
+  if (checksumSuccess) {
+    // Seperate out the values
+    int temperature = (serialData[0] << 8) | serialData[1];
+    int humidity = (serialData[3] << 8) | serialData[4];
+
+    // Convert the values
+    temperature = (temperature * 315.0 / 65535.0) - 49.0;
+    humidity = (humidity * 125.0 / 65535.0) - 6.0;
+
+    // Print the values
+    char output[50];
+    Serial.print(temperatureLabel);
+    sprintf(output, "%d F", temperature);
+    Serial.println(output);
+    Serial.print(humidityLabel);
+    sprintf(output, "%d%%", humidity);
+    Serial.println(output);
+  } else {
+    Serial.print(temperatureLabel);
+    Serial.println("Checksum is invalid.");
+    Serial.print(humidityLabel);
+    Serial.println("Checksum is invalid.");
+  }
+}
+
+void retrieveSerialNumber() {
+  byte serialData[6];
+  bool checksumSuccess = retrieveI2cValue(TEMP_SENSOR_ADDRESS, 0x89, serialData);
+
+  // Check the serial number cheksums
+  Serial.print("Serial Number: ");
+  if (checksumSuccess) {
+    char output[200];
+    sprintf(output, "%02x%02x%02x%02x", 
+            serialData[0], serialData[1], serialData[3], serialData[4]);
+    Serial.println(output);
+  } else {
+    Serial.println("Checksum is invalid.");
+  }
+}
+
+bool retrieveI2cValue(uint8_t address, byte command, byte data[6]) {
+  // Send the request
+  Wire.beginTransmission(address); // Address of the device
+  Wire.write(command); // Command to send
+  Wire.endTransmission();
+
+  // Listen for the response
+  delay(10);
+  Wire.requestFrom(address, 6u);
+  byte i = 0;
+  while (Wire.available()) {
+    // Read the byte and store it
+    char c = Wire.read();
+    if (i < 6) {
+      data[i] = c;
+    }
+    i++;
+  }
+
+  return i == 6 && verifyChecksum(data);
 }
 
 bool verifyChecksum(byte data[6]) {
@@ -69,20 +116,6 @@ bool verifyChecksum(byte data[6]) {
 bool verifyChecksumPiece(byte data[2], byte checksum) {
   // Compute the checksum
   byte computedCheckshum = computeCrc8Simple(data);
-
-  // Print out
-  char output[6];
-  sprintf(output, "%02X ", data[0]);
-  Serial.print(output);
-  sprintf(output, "%02X ", data[1]);
-  Serial.print(output);
-  Serial.print("= ");
-  sprintf(output, "%02X ", computedCheckshum);
-  Serial.print(output);
-  Serial.print(".  Expected checksum ");
-  sprintf(output, "%02X ", checksum);
-  Serial.print(output);
-  Serial.println();
 
   // Return the results
   return computedCheckshum == checksum;
