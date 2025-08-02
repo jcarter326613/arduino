@@ -37,7 +37,7 @@ void loop() {
 }
 
 void retrieveTemperatureAndHumidity() {
-  byte serialData[6];
+  uint8_t serialData[6];
   bool checksumSuccess = retrieveI2cValue(TEMP_SENSOR_ADDRESS, 0xFD, serialData);
 
   // Check the checksums
@@ -47,8 +47,8 @@ void retrieveTemperatureAndHumidity() {
   // Print out the temperature and humidity
   if (checksumSuccess) {
     // Seperate out the values
-    int temperature = (serialData[0] << 8) | serialData[1];
-    int humidity = (serialData[3] << 8) | serialData[4];
+    uint16_t temperature = (serialData[0] << 8) | serialData[1];
+    uint16_t humidity = (serialData[3] << 8) | serialData[4];
 
     // Convert the values
     temperature = (temperature * 315.0 / 65535.0) - 49.0;
@@ -71,7 +71,7 @@ void retrieveTemperatureAndHumidity() {
 }
 
 void retrieveSerialNumber() {
-  byte serialData[6];
+  uint8_t serialData[6];
   bool checksumSuccess = retrieveI2cValue(TEMP_SENSOR_ADDRESS, 0x89, serialData);
 
   // Check the serial number cheksums
@@ -86,7 +86,7 @@ void retrieveSerialNumber() {
   }
 }
 
-bool retrieveI2cValue(uint8_t address, byte command, byte data[6]) {
+bool retrieveI2cValue(uint8_t address, uint8_t command, uint8_t data[6]) {
   // Send the request
   Wire.beginTransmission(address); // Address of the device
   Wire.write(command); // Command to send
