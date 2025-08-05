@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <EEPROM.h>
 #include <Wire.h>
 
 const int ledPin = LED_BUILTIN;
@@ -27,6 +28,9 @@ void loop() {
   digitalWrite(ledPin, HIGH);
   Wire.begin();
 
+  // Get the seconds since the program started
+  long seconds = millis() / 1000;
+
   // Get the values
   retrieveSerialNumber();
   uint8_t buffer[6];
@@ -34,6 +38,7 @@ void loop() {
   if (success) {
     retrieveVoc(buffer);
   }
+  Serial.print(EEPROM.length());
 
   // Turn the LED off
   Serial.println();
