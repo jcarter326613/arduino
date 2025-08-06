@@ -2,17 +2,20 @@
 #include <EEPROM.h>
 #include <Wire.h>
 
-const int ledPin = LED_BUILTIN;
+#include "eeprom-writer.h"
+
+const uint16_t ledPin = LED_BUILTIN;
 const uint8_t TEMP_SENSOR_ADDRESS = 0x44;
 const uint8_t VOC_SENSOR_ADDRESS = 0x59;
+EepromWriter *eepromWriter;
+int16_t lastPrintedMinute = -1;
 
-void retrieveVoc(uint8_t buffer[6]);
+uint16_t retrieveVoc(uint8_t buffer[6]);
 bool retrieveTemperatureAndHumidity(uint8_t serialData[6]);
-void retrieveSerialNumber();
 bool retrieveI2cValue(uint8_t address, uint8_t command[], uint8_t commandLength, uint8_t outputBuffer[], uint8_t outputBufferSize, uint8_t delayMs);
 bool retrieveI2cValueWithParameters(uint8_t address, uint8_t command[], uint8_t commandLength, uint8_t parameters[], uint8_t parametersLength, uint8_t outputBuffer[], uint8_t outputBufferSize, uint8_t delayMs);
 
-bool verifyChecksum(byte data[6], int length);
+bool verifyChecksum(byte data[6], uint16_t length);
 bool verifyChecksumPiece(byte data[2], byte checksum);
 byte computeCrc8Simple(byte bytes[2]);
 
@@ -21,6 +24,10 @@ void setup() {
   pinMode(ledPin, OUTPUT);
 
   Serial.begin(9600);
+  Serial.println();
+  Serial.println();
+  eepromWriter = new EepromWriter();
+  eepromWriter->printMemory();
 }
 
 void loop() {
@@ -28,28 +35,31 @@ void loop() {
   digitalWrite(ledPin, HIGH);
   Wire.begin();
 
-  // Get the seconds since the program started
-  long seconds = millis() / 1000;
-
   // Get the values
-  retrieveSerialNumber();
   uint8_t buffer[6];
   bool success = retrieveTemperatureAndHumidity(buffer);
+  uint16_t voc = 0;
   if (success) {
-    retrieveVoc(buffer);
+    voc = retrieveVoc(buffer);
   }
-  Serial.print(EEPROM.length());
+  Serial.println();
 
   // Turn the LED off
-  Serial.println();
   digitalWrite(ledPin, LOW);
   Wire.end();
 
+  // Record the data
+  const int16_t currentMinute = millis() / (60 * (uint32_t)1000);
+  if (currentMinute != lastPrintedMinute && voc > 0) {
+    lastPrintedMinute = currentMinute;
+    eepromWriter->writeShort((short)voc);
+  }
+
   // Wait until we do it again
-  delay(1000);
+  delay(10000);
 }
 
-void retrieveVoc(uint8_t tempAndHumidityBuffer[6]) {
+uint16_t retrieveVoc(uint8_t tempAndHumidityBuffer[6]) {
   uint8_t serialData[3] = {0, 0, 0};
   uint8_t command[2] = {0x26, 0x0F};
 
@@ -68,12 +78,16 @@ void retrieveVoc(uint8_t tempAndHumidityBuffer[6]) {
     Serial.print(vocLabel);
     sprintf(output, "%d", voc);
     Serial.println(output);
+
+    return voc;
   } else {
     Serial.print(vocLabel);
     char output[50];
     sprintf(output, "%02x%02x%02x ", serialData[0], serialData[1], serialData[2]);
     Serial.print(output);
     Serial.println("Checksum is invalid.");
+
+    return -1;
   }
 }
 
@@ -115,23 +129,6 @@ bool retrieveTemperatureAndHumidity(uint8_t serialData[6]) {
   }
 }
 
-void retrieveSerialNumber() {
-  uint8_t serialData[6];
-  uint8_t command[1] = {0x89};
-  bool checksumSuccess = retrieveI2cValue(TEMP_SENSOR_ADDRESS, command, 1, serialData, 6, 1);
-
-  // Check the serial number cheksums
-  Serial.print("Serial Number: ");
-  if (checksumSuccess) {
-    char output[200];
-    sprintf(output, "%02x%02x%02x%02x", 
-            serialData[0], serialData[1], serialData[3], serialData[4]);
-    Serial.println(output);
-  } else {
-    Serial.println("Checksum is invalid.");
-  }
-}
-
 bool retrieveI2cValue(uint8_t address, uint8_t command[], uint8_t commandLength, uint8_t outputBuffer[], uint8_t outputBufferSize, uint8_t delayMs) {
   uint8_t parameters[0];
   return retrieveI2cValueWithParameters(address, command, commandLength, parameters, 0, outputBuffer, outputBufferSize, delayMs);
@@ -164,12 +161,12 @@ bool retrieveI2cValueWithParameters(uint8_t address, uint8_t command[], uint8_t 
   return i == outputBufferSize && verifyChecksum(outputBuffer, outputBufferSize);
 }
 
-bool verifyChecksum(byte data[], int length) {
+bool verifyChecksum(byte data[], uint16_t length) {
   if (length % 3 != 0) {
     return false;
   }
 
-  for (int i = 0; i < length; i += 3) {
+  for (uint16_t i = 0; i < length; i += 3) {
     if (!verifyChecksumPiece(data + i, data[i + 2])) {
       return false;
     }
@@ -177,7 +174,7 @@ bool verifyChecksum(byte data[], int length) {
   return true;
 }
 
-bool verifyChecksumPiece(byte data[2], byte checksum) {
+bool verifyChecksumPiece(byte data[2], uint8_t checksum) {
   // Compute the checksum
   byte computedCheckshum = computeCrc8Simple(data);
 
@@ -189,11 +186,11 @@ byte computeCrc8Simple(byte bytes[2]) {
     const byte generator = 0x31;
     byte crc = 0xFF;
 
-    for (int i = 0; i < 2; i++) {
+    for (uint8_t i = 0; i < 2; i++) {
       byte currByte = bytes[i];
       crc ^= currByte;
 
-      for (int j = 0; j < 8; j++) {
+      for (uint8_t j = 0; j < 8; j++) {
         if ((crc & 0x80) != 0) {
           crc = (byte)((crc << 1) ^ generator);
         } else {

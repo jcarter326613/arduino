@@ -1,13 +1,15 @@
+#include <Arduino.h>
+
 class EepromWriter {
     public:
         EepromWriter();
-        void writeShort(short value);
+        void writeShort(uint16_t value);
+        const void printMemory();
 
     private:
-        const unsigned int minimumDataAddress;
-        const unsigned int eepromSize;
+        const uint16_t minimumDataAddress;
+        const uint16_t eepromSize;
 
-        unsigned int highestWrittenAddress;
-        unsigned int firstWrittenAddress;
-        unsigned int nextAddress;
+        uint16_t highestWrittenAddress;
+        uint16_t nextAddress;
 };
