@@ -2,13 +2,16 @@
 #include <EEPROM.h>
 #include <Wire.h>
 
+#include "display.h"
 #include "eeprom-writer.h"
 
 const uint16_t ledPin = LED_BUILTIN;
 const uint8_t TEMP_SENSOR_ADDRESS = 0x44;
 const uint8_t VOC_SENSOR_ADDRESS = 0x59;
-EepromWriter *eepromWriter;
 int16_t lastPrintedMinute = -1;
+
+EepromWriter *eepromWriter;
+Display *display;
 
 uint16_t retrieveVoc(uint8_t buffer[6]);
 bool retrieveTemperatureAndHumidity(uint8_t serialData[6]);
@@ -26,8 +29,10 @@ void setup() {
   Serial.begin(9600);
   Serial.println();
   Serial.println();
+
   eepromWriter = new EepromWriter();
   eepromWriter->printMemory();
+  display = new Display();
 }
 
 void loop() {
@@ -75,9 +80,9 @@ uint16_t retrieveVoc(uint8_t tempAndHumidityBuffer[6]) {
 
     // Print the value
     char output[50];
-    Serial.print(vocLabel);
-    sprintf(output, "%d", voc);
+    sprintf(output, "%s%d", vocLabel, voc);
     Serial.println(output);
+    display->setLine(2, output);
 
     return voc;
   } else {
@@ -111,12 +116,12 @@ bool retrieveTemperatureAndHumidity(uint8_t serialData[6]) {
 
     // Print the values
     char output[50];
-    Serial.print(temperatureLabel);
-    sprintf(output, "%d F", temperature);
+    sprintf(output, "%s%d F", temperatureLabel, temperature);
     Serial.println(output);
-    Serial.print(humidityLabel);
-    sprintf(output, "%d%%", humidity);
+    display->setLine(0, output);
+    sprintf(output, "%s%d%%", humidityLabel, humidity);
     Serial.println(output);
+    display->setLine(1, output);
 
     return true;
   } else {
