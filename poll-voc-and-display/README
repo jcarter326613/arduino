@@ -1,0 +1,18 @@
+To run
+```
+cd C:\Users\Jason\Downloads\arduino-cli_1.2.2_Windows_64bit
+.\arduino-cli.exe compile -b arduino:avr:uno d:\Code\mycode\arduino\sketch1
+.\arduino-cli.exe upload -t -p COM3 -b arduino:avr:uno d:\Code\mycode\arduino\sketch1
+putty COM3 -serial -sercfg 9600,8,n,1,N
+```
+
+
+** Wiring Arduino Uno R3 **
+1. Wire display according to display.cpp instructions.
+2. Connect Arduino 3.3v to power strip plus and ground to ground strip.
+3. Connect SENSEVAL-SCB4XV1 evaluation board
+    1. Connect ground to pin 13
+    2. Connect power strip to pin 1
+    3. Connect Arduino SCL to pin 20
+    3. Connect Arduino SDA to pin 21
+    
