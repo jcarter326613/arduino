@@ -2,6 +2,22 @@
 
 #include "display.h"
 
+/**
+ * Wiring instructions:
+ * - Pin 1 Ground
+ * - Pin 2 3.3v
+ * - Pin 3 Ground
+ * - Pin 4 pinRs
+ * - Pin 5 pinRW
+ * - Pin 6 pinE
+ * - Pin 11 pinData4
+ * - Pin 12 pinData5
+ * - Pin 13 pinData6
+ * - Pin 14 pinData7
+ * - Pin 15 3.3v
+ * - Pin 16 Ground
+ */
+
 const uint16_t pinContrast = 3;
 const uint16_t pinRs = 5;
 const uint16_t pinRW = 4;
