@@ -1,0 +1,11 @@
+To run
+```
+cd C:\Users\Jason\Downloads\arduino-cli_1.2.2_Windows_64bit
+.\arduino-cli.exe compile -b arduino:renesas_uno:unor4wifi d:\Code\mycode\arduino\poll-sensors-and-post
+.\arduino-cli.exe upload -t -p COM4 -b arduino:renesas_uno:unor4wifi d:\Code\mycode\arduino\poll-sensors-and-post
+putty COM4 -serial -sercfg 9600,8,n,1,N
+```
+
+
+** Wiring Arduino Uno R4 Wifi **
+1. 
