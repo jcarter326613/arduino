@@ -1,8 +1,8 @@
 To run
 ```
 cd C:\Users\Jason\Downloads\arduino-cli_1.2.2_Windows_64bit
-.\arduino-cli.exe compile -b arduino:avr:uno d:\Code\mycode\arduino\sketch1
-.\arduino-cli.exe upload -t -p COM3 -b arduino:avr:uno d:\Code\mycode\arduino\sketch1
+.\arduino-cli.exe compile -b arduino:avr:uno d:\Code\mycode\arduino\poll-voc-and-display
+.\arduino-cli.exe upload -t -p COM3 -b arduino:avr:uno d:\Code\mycode\arduino\poll-voc-and-display
 putty COM3 -serial -sercfg 9600,8,n,1,N
 ```
 
@@ -15,4 +15,3 @@ putty COM3 -serial -sercfg 9600,8,n,1,N
     2. Connect power strip to pin 1
     3. Connect Arduino SCL to pin 20
     3. Connect Arduino SDA to pin 21
-    
