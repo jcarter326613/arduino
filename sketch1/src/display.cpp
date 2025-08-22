@@ -3,6 +3,10 @@
 #include "display.h"
 
 /**
+ * Device: NHD-0420H1Z-FL-GBW-33V3
+ */
+
+/**
  * Wiring instructions:
  * - Pin 1 Ground
  * - Pin 2 3.3v
