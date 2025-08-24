@@ -1,16 +1,16 @@
 #include <Arduino.h>
-#include <EEPROM.h>
+//#include <EEPROM.h>
 #include <Wire.h>
 
 #include "display.h"
-#include "eeprom-writer.h"
+//#include "eeprom-writer.h"
 
 const uint16_t ledPin = LED_BUILTIN;
 const uint8_t TEMP_SENSOR_ADDRESS = 0x44;
 const uint8_t VOC_SENSOR_ADDRESS = 0x59;
 int16_t lastPrintedMinute = -1;
 
-EepromWriter *eepromWriter;
+//EepromWriter *eepromWriter; //Turns out this is not good because eeprom can onl be written 100,000 times before the hardware fails
 Display *display;
 
 uint16_t retrieveVoc(uint8_t buffer[6]);
@@ -30,8 +30,8 @@ void setup() {
   Serial.println();
   Serial.println();
 
-  eepromWriter = new EepromWriter();
-  eepromWriter->printMemory();
+  //eepromWriter = new EepromWriter();
+  //eepromWriter->printMemory();
   display = new Display();
 }
 
@@ -57,7 +57,7 @@ void loop() {
   const int16_t currentMinute = millis() / (60 * (uint32_t)1000);
   if (currentMinute != lastPrintedMinute && voc > 0) {
     lastPrintedMinute = currentMinute;
-    eepromWriter->writeShort((short)voc);
+    //eepromWriter->writeShort((short)voc);
   }
 
   // Wait until we do it again
