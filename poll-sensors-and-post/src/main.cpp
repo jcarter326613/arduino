@@ -18,12 +18,10 @@ char ssid[] = SECRET_SSID;
 char pass[] = SECRET_PASS;
 
 int status = WL_IDLE_STATUS;
-char server[] = "api.skipthedevops.com";
-char getHeader[] = "GET /health HTTP/1.1";
-char hostHeader[] = "Host: api.skipthedevops.com";
 
 WiFiSSLClient client;
 
+void sendMeasurementExample();
 void printWifiStatus();
 
 void setup() {
@@ -65,34 +63,55 @@ void setup() {
 
     printWifiStatus();
 
-    Serial.println("\nStarting connection to server...");
-    // if you get a connection, report back via serial:
-    //client.setCACert(root_ca);
-    if (client.connect(server, 443)) {
-        Serial.println("connected to server");
-        // Make a HTTP request:
-        client.println(getHeader);
-        client.println(hostHeader);
-        client.println("Cache-Control: no-cache");
-        client.println("Connection: close");
-        client.println();
-    }
+    Serial.println("\nStarting readings...");
 }
 
+bool readingResponse = false;
+
 void loop() {
+    // Send the measurement
+    if (!readingResponse) {
+        sendMeasurementExample();
+    }
+
+    // Read the response
     while (client.available()) {
         char c = client.read();
         Serial.print(c);
     }
 
-    // if the server's disconnected, stop the client:
+    // if the server's disconnected, wait the required delay:
     if (!client.connected()) {
+        readingResponse = false;
+        delay(10 * 60 * 1000);  // Delay for 10 minutes
         Serial.println();
-        Serial.println("disconnecting from server.");
-        client.stop();
+        Serial.println();
+    }
+}
 
-        // do nothing forevermore:
-        while (true);
+void sendMeasurementExample() {
+    if (client.connect("ghs.skipthedevops.com", 443)) {
+        Serial.println("connected to server");
+
+        const char body[] = "{\"sensorId\":\"11111111-1111-1111-1111-111111111111\",\"readingType\":\"test\",\"unit\":\"none\",\"value\":43}";
+        const uint16_t bodyLength = strlen(body);
+        char contentLengthBuffer[50];
+        sprintf(contentLengthBuffer, "Content-Length: %d", bodyLength);
+
+        client.println("POST /v1/sensor-readings HTTP/1.1");
+        client.println("Host: ghs.skipthedevops.com");
+        client.println("Cache-Control: no-cache");
+        client.println("Connection: close");
+        client.println("Content-Type: application/json");
+        client.println(contentLengthBuffer);
+        client.println();
+
+        Serial.println(body);
+        Serial.println(contentLengthBuffer);
+
+        client.print(body);
+
+        readingResponse = true;
     }
 }
 
