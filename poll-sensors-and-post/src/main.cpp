@@ -45,6 +45,24 @@ void loop() {
     uint16_t temperature;
     uint16_t humidity;
     if (sensevalScb4xv1.getReadings(voc, temperature, humidity)) {
+        // Send the Temperature
+        std::string tempString = std::to_string(temperature);
+        Measurement measurementTemp("Temperature", "fahrenheit", tempString.data());
+        if (!networkCommunication.sendMeasurement(measurementTemp)) {
+            Serial.println("Failed to send measurement.");
+        } else {
+            Serial.println("Temperature measurement sent.");
+        }
+
+        // Send the VOC
+        std::string humString = std::to_string(humidity);
+        Measurement measurementHumidity("Humidity", "%RH", humString.data());
+        if (!networkCommunication.sendMeasurement(measurementHumidity)) {
+            Serial.println("Failed to send measurement.");
+        } else {
+            Serial.println("Humidity measurement sent.");
+        }
+
         // Send the VOC
         std::string vocString = std::to_string(voc);
         Measurement measurement("VOC", "none", vocString.data());
@@ -56,6 +74,5 @@ void loop() {
     }
 
     // Wait for 10 minutes
-    //delay(10 * 60 * 1000);
-    delay(10 * 1000);
+    delay(10 * 60 * 1000);
 }

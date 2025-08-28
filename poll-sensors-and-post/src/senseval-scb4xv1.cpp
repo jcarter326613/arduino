@@ -84,12 +84,6 @@ bool SensevalScb4xv1::retrieveI2cValueWithParameters(uint8_t address, uint8_t co
         i++;
     }
 
-    char debugBuffer[50];
-    sprintf(debugBuffer, "%02X:%02X:%02X:%02X:%02X:%02X", outputBuffer[0], outputBuffer[1], outputBuffer[2], outputBuffer[3], outputBuffer[4], outputBuffer[5]);
-    Serial.println("test 1");
-    Serial.println(debugBuffer);
-    sprintf(debugBuffer, "%d", i);
-    Serial.println(debugBuffer);
     return i == outputBufferSize && verifyChecksum(outputBuffer, outputBufferSize);
 }
 

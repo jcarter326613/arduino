@@ -67,7 +67,7 @@ bool NetworkCommunication::sendMeasurement(const Measurement& measurement) {
     char emptyBuffer[0];
     int bodyLength = snprintf(emptyBuffer, 0, 
         "{\"sensorId\":\"%s\",\"readingType\":\"%s\",\"unit\":\"%s\",\"value\":%s}",
-        sensorId,
+        sensorId.data(),
         measurement.type,
         measurement.unit,
         measurement.value
@@ -75,7 +75,7 @@ bool NetworkCommunication::sendMeasurement(const Measurement& measurement) {
     char *body = new char[bodyLength + 1];
     snprintf(body, bodyLength + 1, 
         "{\"sensorId\":\"%s\",\"readingType\":\"%s\",\"unit\":\"%s\",\"value\":%s}",
-        sensorId,
+        sensorId.data(),
         measurement.type,
         measurement.unit,
         measurement.value
