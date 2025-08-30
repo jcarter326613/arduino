@@ -89,11 +89,15 @@ bool SensevalScb4xv1::retrieveI2cValueWithParameters(uint8_t address, uint8_t co
 
 bool SensevalScb4xv1::verifyChecksum(byte data[], uint16_t length) {
     if (length % 3 != 0) {
+        Serial.println("Eval board Checksum failed length");
         return false;
     }
 
     for (uint16_t i = 0; i < length; i += 3) {
         if (!verifyChecksumPiece(data + i, data[i + 2])) {
+            char output[50];
+            sprintf(output, "Eval board Checksum failed piece %d", i);
+            Serial.println(output);
             return false;
         }
     }

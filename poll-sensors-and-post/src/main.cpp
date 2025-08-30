@@ -4,6 +4,7 @@
 
 #include "network-communication.h"
 #include "senseval-scb4xv1.h"
+#include "sensiron-scd30.h"
 
 // Convert SSL certs to ECP32 variable
 // https://unreeeal.github.io/ssl_esp.html
@@ -15,6 +16,7 @@ void sendMeasurementExample();
 bool hasEvenConnected = false;
 NetworkCommunication networkCommunication("11111111-1111-1111-1111-111111111111");
 SensevalScb4xv1 sensevalScb4xv1;
+SensironScd30 sensironScd30;
 
 void setup() {
     Serial.begin(9600);
@@ -25,6 +27,7 @@ void setup() {
 void loop() {
     // Connect to the network
     while (!networkCommunication.isConnected()) {
+        Serial.println("t3");
         if (!hasEvenConnected) {
             Serial.println("Connecting to network.");
         } else {
@@ -41,10 +44,20 @@ void loop() {
     }
 
     // Read the sensors
+    float co2;
+    float co2Tempurature;
+    float co2Humidity;
     uint16_t voc;
     uint16_t temperature;
     uint16_t humidity;
-    if (sensevalScb4xv1.getReadings(voc, temperature, humidity)) {
+    bool success = true;
+
+    success = sensironScd30.getReadings(co2, co2Tempurature, co2Humidity);
+    delay(100);
+    success = success && sensevalScb4xv1.getReadings(voc, temperature, humidity);
+
+    // Report the data
+    if (success) {
         // Send the Temperature
         std::string tempString = std::to_string(temperature);
         Measurement measurementTemp("Temperature", "fahrenheit", tempString.data());
@@ -71,8 +84,40 @@ void loop() {
         } else {
             Serial.println("VOC measurement sent.");
         }
-    }
 
-    // Wait for 10 minutes
-    delay(10 * 60 * 1000);
+        // Send temp 2        
+        std::string temp2String = std::to_string(co2Tempurature);
+        Measurement measurementTemp2("Temperature2", "fahrenheit", temp2String.data());
+        if (!networkCommunication.sendMeasurement(measurementTemp2)) {
+            Serial.println("Failed to send measurement.");
+        } else {
+            Serial.println("Temperature 2 measurement sent.");
+        }
+        
+        // Send hum 2        
+        std::string hum2String = std::to_string(co2Humidity);
+        Measurement measurementHum2("Humidity2", "%RH", hum2String.data());
+        if (!networkCommunication.sendMeasurement(measurementHum2)) {
+            Serial.println("Failed to send measurement.");
+        } else {
+            Serial.println("Humidity 2 measurement sent.");
+        }
+        
+        // Send co2        
+        std::string co2String = std::to_string(co2);
+        Measurement measurementCo2("CO2", "ppm", co2String.data());
+        if (!networkCommunication.sendMeasurement(measurementCo2)) {
+            Serial.println("Failed to send measurement.");
+        } else {
+            Serial.println("CO2 measurement sent.");
+        }
+        
+        // Wait for 10 minutes
+        delay(10 * 60 * 1000);
+    } else {
+        // We failed, so only wait a half second before retrying
+        Serial.println("t0");
+        delay(500);
+        Serial.println("t1");
+    }
 }
