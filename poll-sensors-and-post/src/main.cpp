@@ -18,7 +18,11 @@ NetworkCommunication networkCommunication("11111111-1111-1111-1111-111111111111"
 SensevalScb4xv1 sensevalScb4xv1;
 SensironScd30 sensironScd30;
 
+const uint16_t signalPin = 2;
+
 void setup() {
+    pinMode(signalPin, OUTPUT);
+
     Serial.begin(9600);
     Serial.println();
     Serial.println();
@@ -50,11 +54,23 @@ void loop() {
     uint16_t voc;
     uint16_t temperature;
     uint16_t humidity;
-    bool success = true;
 
-    success = sensironScd30.getReadings(co2, co2Tempurature, co2Humidity);
+    bool success1 = sensironScd30.getReadings(co2, co2Tempurature, co2Humidity);
     delay(100);
-    success = success && sensevalScb4xv1.getReadings(voc, temperature, humidity);
+    bool success2 = sensevalScb4xv1.getReadings(voc, temperature, humidity);
+
+    if (success1) {
+        Serial.println("sensironScd30 success");
+    } else {
+        Serial.println("sensironScd30 failed");
+    }
+    if (success2) {
+        Serial.println("sensevalScb4xv1 success");
+    } else {
+        Serial.println("sensevalScb4xv1 failed");
+    }
+    
+    bool success = success1 && success2;
 
     // Report the data
     if (success) {
@@ -113,11 +129,14 @@ void loop() {
         }
         
         // Wait for 10 minutes
-        delay(10 * 60 * 1000);
+        //delay(10 * 60 * 1000);
     } else {
         // We failed, so only wait a half second before retrying
         Serial.println("t0");
-        delay(500);
+        //delay(500);
         Serial.println("t1");
     }
+    
+    digitalWrite(signalPin, HIGH);
+    delay(5000);
 }

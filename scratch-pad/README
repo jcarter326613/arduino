@@ -1,0 +1,16 @@
+Uno R4 Wifi
+```
+cd C:\Users\Jason\Downloads\arduino-cli_1.2.2_Windows_64bit
+.\arduino-cli.exe compile -b arduino:renesas_uno:unor4wifi d:\Code\mycode\arduino\scratch-pad
+.\arduino-cli.exe upload -t -p COM4 -b arduino:renesas_uno:unor4wifi d:\Code\mycode\arduino\scratch-pad
+putty COM4 -serial -sercfg 9600,8,n,1,N
+```
+
+
+Uno R3
+```
+cd C:\Users\Jason\Downloads\arduino-cli_1.2.2_Windows_64bit
+.\arduino-cli.exe compile -b arduino:avr:uno d:\Code\mycode\arduino\scratch-pad
+.\arduino-cli.exe upload -t -p COM3 -b arduino:avr:uno d:\Code\mycode\arduino\scratch-pad
+putty COM3 -serial -sercfg 9600,8,n,1,N
+```
