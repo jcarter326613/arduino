@@ -14,36 +14,55 @@ SensironScd30::SensironScd30():
 }
 
 bool SensironScd30::getReadings(float &co2, float &tempurature, float &humidity) {
-    Wire.begin();
 
-    initialize();
+    if (!initialize()) {
+        return false;
+    }
 
     // Get the values
     uint8_t buffer[6];
+    Wire.begin();
+    Serial.println("Waiting for ready");
     bool success = waitForReady();
+    Serial.println("Waiting for ready complete");
+    Wire.end();
     if (!success) {
         return false;
     }
 
+    Wire.begin();
+    Serial.println("Retrieving CO2");
     success = retrieveCo2(co2, tempurature, humidity);
+    Serial.println("Retrieving CO2 complete");
+    Wire.end();
     if (success) {
         tempurature = tempurature * 9 / 5 + 32;
     }
 
-    Wire.end();
 
     return success;
 }
 
-void SensironScd30::initialize() {
+bool SensironScd30::initialize() {
     if (isInitialized) {
-        return;
+        return true;
     }
 
+    Serial.println("Initializing");
+
+    Wire.begin();
     uint8_t command[2] = {0x00, 0x10};
     uint8_t parameters[2] = {0x00, 0x00};
-    writeI2cValueWithParameters(SENSOR_ADDRESS, command, 2, parameters, 2);
-    isInitialized = true;
+    bool result = writeI2cValueWithParameters(SENSOR_ADDRESS, command, 2, parameters, 2);
+    if (result) {
+        isInitialized = true;
+        Serial.println("Initializing complete");
+    } else {
+        Serial.println("Initializing failed");
+    }
+    Wire.end();
+
+    return isInitialized;
 }
 
 bool SensironScd30::waitForReady() {
@@ -121,19 +140,41 @@ bool SensironScd30::writeI2cValue(uint8_t address, uint8_t command[], uint8_t co
 }
 
 bool SensironScd30::writeI2cValueWithParameters(uint8_t address, uint8_t command[], uint8_t commandLength, uint8_t parameters[], uint8_t parametersLength) {
-    // Send the request
-    Wire.beginTransmission(address); // Address of the device
-    for (uint8_t i = 0; i < commandLength; i++) {
-        Wire.write(command[i]);
-    }
-    for (uint8_t i = 0; i < parametersLength; i++) {
-        Wire.write(parameters[i]);
+    char output[50];
+    uint8_t bytesWritten;
+    uint8_t tryCount = 0;
+    while (true) {
+        Wire.beginTransmission(address); // Address of the device
 
-        if (i % 2 != 0) {
-            Wire.write(computeCrc8Simple(parameters + i));
+        bytesWritten = Wire.write(command, commandLength);
+        if (bytesWritten != commandLength) {
+            sprintf(output, "Only %d command bytes witten.", bytesWritten);
+            Serial.println(output);
         }
+        for (uint8_t i = 0; i < parametersLength; i++) {
+            Wire.write(parameters[i]);
+
+            if (i % 2 != 0) {
+                Wire.write(computeCrc8Simple(parameters + i));
+            }
+        }
+
+        uint8_t result = Wire.endTransmission();
+
+        if (result == 0) {
+            break;
+        }
+
+        sprintf(output, "End result %d.", result);
+        Serial.println(output);
+        tryCount++;
+        if (tryCount > 3) {
+            return false;
+        }
+        delay(100);
     }
-    Wire.endTransmission();
+
+    return true;
 }
 
 bool SensironScd30::retrieveI2cValue(uint8_t address, uint8_t command[], uint8_t commandLength, uint8_t outputBuffer[], uint8_t outputBufferSize, uint8_t &outputBytesAvailable) {
@@ -142,15 +183,40 @@ bool SensironScd30::retrieveI2cValue(uint8_t address, uint8_t command[], uint8_t
 }
 
 bool SensironScd30::retrieveI2cValueWithParameters(uint8_t address, uint8_t command[], uint8_t commandLength, uint8_t parameters[], uint8_t parametersLength, uint8_t outputBuffer[], uint8_t outputBufferSize, uint8_t &outputBytesAvailable) {
-    // Send the request
-    Wire.beginTransmission(address); // Address of the device
-    for (uint8_t i = 0; i < commandLength; i++) {
-        Wire.write(command[i]);
+    char output[50];
+    
+    uint8_t bytesWritten;
+    uint8_t tryCount = 0;
+    while (true) {
+        Wire.beginTransmission(address); // Address of the device
+
+        bytesWritten = Wire.write(command, commandLength);
+        if (bytesWritten != commandLength) {
+            sprintf(output, "Only %d command bytes witten.", bytesWritten);
+            Serial.println(output);
+        }
+        for (uint8_t i = 0; i < parametersLength; i++) {
+            Wire.write(parameters[i]);
+
+            if (i % 2 != 0) {
+                Wire.write(computeCrc8Simple(parameters + i));
+            }
+        }
+
+        uint8_t result = Wire.endTransmission();
+
+        if (result == 0) {
+            break;
+        }
+
+        sprintf(output, "End result %d.", result);
+        Serial.println(output);
+        tryCount++;
+        if (tryCount > 3) {
+            return false;
+        }
+        delay(100);
     }
-    for (uint8_t i = 0; i < parametersLength; i++) {
-        Wire.write(parameters[i]);
-    }
-    Wire.endTransmission();
 
     // Listen for the response
     Wire.requestFrom(address, outputBufferSize);
@@ -159,11 +225,8 @@ bool SensironScd30::retrieveI2cValueWithParameters(uint8_t address, uint8_t comm
     while (true) {
         // Terminate the loop or wait for the first byte
         if (!Wire.available()) {
-            if (outputBytesAvailable == 0) {
-                if (failureCount >= (1000 / 5)) {
-                    break;
-                }
-                delay(5);
+            if (failureCount < 10) {
+                delay(100);
                 failureCount++;
                 continue;
             } else {
@@ -172,11 +235,23 @@ bool SensironScd30::retrieveI2cValueWithParameters(uint8_t address, uint8_t comm
         }
 
         // Read the byte and store it
+        failureCount = 0;
         char c = Wire.read();
         if (outputBytesAvailable < outputBufferSize) {
             outputBuffer[outputBytesAvailable] = c;
         }
         outputBytesAvailable++;
+    }
+
+    if (outputBytesAvailable != outputBufferSize) {
+        sprintf(output, "Read %d of %d", outputBytesAvailable, outputBufferSize);
+        Serial.println(output);
+
+        for (int i = 0; i < outputBufferSize; i++) {
+            sprintf(output, "%02X", outputBuffer[i]);
+            Serial.print(output);
+        }
+        Serial.println();
     }
 
     return outputBytesAvailable == outputBufferSize && verifyChecksum(outputBuffer, outputBytesAvailable);
@@ -187,6 +262,13 @@ bool SensironScd30::verifyChecksum(byte data[], uint16_t length) {
         Serial.println("SCD30 Checksum failed length");
         return false;
     }
+
+    char output[50];
+    for (int i = 0; i < length; i++) {
+        sprintf(output, "%02X", data[i]);
+        Serial.print(output);
+    }
+    Serial.println();
 
     for (uint16_t i = 0; i < length; i += 3) {
         if (!verifyChecksumPiece(data + i, data[i + 2])) {

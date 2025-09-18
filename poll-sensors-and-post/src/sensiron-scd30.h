@@ -9,7 +9,7 @@ class SensironScd30 {
         bool getReadings(float &voc, float &tempurature, float &humidity);
 
     private:
-        void initialize();
+        bool initialize();
 
         bool waitForReady();
         bool retrieveCo2(        
