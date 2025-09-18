@@ -31,7 +31,6 @@ void setup() {
 void loop() {
     // Connect to the network
     while (!networkCommunication.isConnected()) {
-        Serial.println("t3");
         if (!hasEvenConnected) {
             Serial.println("Connecting to network.");
         } else {
@@ -132,9 +131,7 @@ void loop() {
         //delay(10 * 60 * 1000);
     } else {
         // We failed, so only wait a half second before retrying
-        Serial.println("t0");
         //delay(500);
-        Serial.println("t1");
     }
     
     digitalWrite(signalPin, HIGH);

@@ -71,7 +71,7 @@ bool SensevalScb4xv1::retrieveI2cValueWithParameters(uint8_t address, uint8_t co
     // Send the request
     uint8_t bytesWritten;
     uint8_t tryCount = 0;
-    while (tryCount < 3) {
+    while (true) {
         Wire.beginTransmission(address); // Address of the device
 
         bytesWritten = Wire.write(command, commandLength);
@@ -94,6 +94,9 @@ bool SensevalScb4xv1::retrieveI2cValueWithParameters(uint8_t address, uint8_t co
         sprintf(output, "End result %d.", result);
         Serial.println(output);
         tryCount++;
+        if (tryCount > 3) {
+            return false;
+        }
         delay(delayMs);
     }
 
