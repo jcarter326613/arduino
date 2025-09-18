@@ -14,34 +14,13 @@ void setup() {
 }
 
 void loop() {
-
-    Serial.println("Starting test in 5 seconds");
+    digitalWrite(ledPin, LOW);
+    digitalWrite(signalPin, LOW);
 
     delay(5000);
 
     digitalWrite(ledPin, HIGH);
     digitalWrite(signalPin, HIGH);
-
-    Serial.println("Timer triggered");
     
-    delay(2000);
-    
-    digitalWrite(ledPin, LOW);
-    digitalWrite(signalPin, LOW);
-
-    Serial.println("Trigger disabled");
-
-    // Indicate the 10 seconds is over
-    delay(8000);
-    for (int i = 0; i < 5; i++) {
-        digitalWrite(ledPin, HIGH);
-        delay(500);
-        digitalWrite(ledPin, LOW);
-        delay(500);
-    }
-
-    // Loop forever
-    while(true) {
-        delay(10000);
-    }
+    delay(5000);
 }
