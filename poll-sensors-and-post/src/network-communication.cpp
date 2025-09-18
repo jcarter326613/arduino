@@ -92,7 +92,7 @@ bool NetworkCommunication::sendMeasurement(const Measurement& measurement) {
 
     // Send the measurement
     if (client.connect("ghs.skipthedevops.com", 443)) {
-        Serial.println("connected to server");
+        //Serial.println("connected to server");
 
         //const uint16_t bodyLength = body.size();
         char contentLengthBuffer[30];
@@ -106,8 +106,8 @@ bool NetworkCommunication::sendMeasurement(const Measurement& measurement) {
         client.println(contentLengthBuffer);
         client.println();
 
-        Serial.println(body);
-        Serial.println(contentLengthBuffer);
+        //Serial.println(body);
+        //Serial.println(contentLengthBuffer);
 
         client.print(body);
     }
@@ -116,7 +116,7 @@ bool NetworkCommunication::sendMeasurement(const Measurement& measurement) {
     while (client.connected()) {
         while (client.available()) {
             char c = client.read();
-            Serial.print(c);
+            //Serial.print(c);
         }
     }
 
