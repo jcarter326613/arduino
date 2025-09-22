@@ -1,5 +1,4 @@
 #include <Arduino.h>
-
 #include "network-communication.h"
 #include "arduino-secrets.h"
 
@@ -13,20 +12,17 @@ NetworkCommunication::~NetworkCommunication() {
 
 bool NetworkCommunication::connect() {
     // Check that wifi exists
-    if (WiFi.status() == WL_NO_MODULE) {
+    if (WiFi.status() == WL_NO_SHIELD) {
         Serial.println("Communication with WiFi module failed!");
         return false;
     }
-    
+
     // Connect to the network
     Serial.print("Attempting to connect to SSID: ");
     Serial.println(SECRET_SSID);
-    
-    int status = WiFi.begin(SECRET_SSID, SECRET_PASS);
-    while (status == WL_IDLE_STATUS) {
-        delay(1000);
-        status = WiFi.status();
-    }
+
+    WiFi.begin(SECRET_SSID, SECRET_PASS);
+    int status = WiFi.waitForConnectResult();
 
     // Wait for an IP address to be assigned
     if (status == WL_CONNECTED) {
@@ -64,8 +60,7 @@ bool NetworkCommunication::isConnected() const {
 
 bool NetworkCommunication::sendMeasurement(const Measurement& measurement) {
     // Create the body
-    char emptyBuffer[0];
-    int bodyLength = snprintf(emptyBuffer, 0, 
+    int bodyLength = snprintf(nullptr, 0,
         "{\"sensorId\":\"%s\",\"readingType\":\"%s\",\"unit\":\"%s\",\"value\":%s}",
         sensorId.data(),
         measurement.type,
@@ -111,7 +106,9 @@ bool NetworkCommunication::sendMeasurement(const Measurement& measurement) {
 
         client.print(body);
     }
-    
+
+    delete[] body;
+
     // Read the response
     while (client.connected()) {
         while (client.available()) {
@@ -135,7 +132,7 @@ void NetworkCommunication::printWifiStatus() {
 
     // print the received signal strength:
     long rssi = WiFi.RSSI();
-    Serial.print("signal strength (RSSI):");
+    Serial.print("signal strength (RSSI): ");
     Serial.print(rssi);
     Serial.println(" dBm");
 }

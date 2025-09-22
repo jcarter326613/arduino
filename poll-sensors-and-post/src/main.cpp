@@ -135,5 +135,5 @@ void loop() {
     }
     
     digitalWrite(signalPin, HIGH);
-    delay(5000);
+    delay(50000);
 }
