@@ -2,6 +2,8 @@
 #include <Wire.h>
 #include <string>
 
+#include "esp_log.h"
+
 #include "network-communication.h"
 #include "senseval-scb4xv1.h"
 #include "sensiron-scd30.h"
@@ -18,15 +20,13 @@ NetworkCommunication networkCommunication("11111111-1111-1111-1111-111111111111"
 SensevalScb4xv1 sensevalScb4xv1;
 SensironScd30 sensironScd30;
 
-const uint16_t signalPin = 2;
-
 #if defined(USE_ESP32)
     const uint8_t I2C_DATA = 33;
     const uint8_t I2C_CLOCK = 32;
 #endif
 
 void setup() {
-    pinMode(signalPin, OUTPUT);
+    esp_log_level_set("*", ESP_LOG_VERBOSE);
 
 #if defined(USE_ESP32)
     Wire.setPins(I2C_DATA, I2C_CLOCK);
@@ -152,6 +152,5 @@ void loop() {
         //delay(500);
     }
     
-    digitalWrite(signalPin, HIGH);
-    delay(50000);
+    delay(1000 * 60 * 5);
 }

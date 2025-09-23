@@ -1,6 +1,11 @@
 #include <Arduino.h>
+
+#include "esp_log.h"
+
 #include "network-communication.h"
 #include "arduino-secrets.h"
+
+static const char *TAG = "NETCOMM";
 
 NetworkCommunication::NetworkCommunication(const char sensorId[]):
     sensorId(sensorId)
@@ -75,21 +80,13 @@ bool NetworkCommunication::sendMeasurement(const Measurement& measurement) {
         measurement.unit,
         measurement.value
     );
-    /*
-    std::string body = std::format(
-        "\{\"sensorId\":\"{}\",\"readingType\":\"{}\",\"unit\":\"{}\",\"value\":{}\}",
-        sensorId,
-        measurement.type,
-        measurement.unit,
-        measurement.value
-    );
-    */
 
     // Send the measurement
+    client.setInsecure();
+    ESP_LOGI(TAG, "Attempting TLS connection to %s:%d", "ghs.skipthedevops.com", 443);
     if (client.connect("ghs.skipthedevops.com", 443)) {
-        //Serial.println("connected to server");
+        Serial.println("connected to server");
 
-        //const uint16_t bodyLength = body.size();
         char contentLengthBuffer[30];
         sprintf(contentLengthBuffer, "Content-Length: %d", bodyLength);
 
@@ -105,6 +102,11 @@ bool NetworkCommunication::sendMeasurement(const Measurement& measurement) {
         //Serial.println(contentLengthBuffer);
 
         client.print(body);
+        
+        ESP_LOGI(TAG, "Connection established successfully");
+    } else {
+        ESP_LOGE(TAG, "Connection failed!");
+        return false;
     }
 
     delete[] body;
@@ -113,7 +115,7 @@ bool NetworkCommunication::sendMeasurement(const Measurement& measurement) {
     while (client.connected()) {
         while (client.available()) {
             char c = client.read();
-            //Serial.print(c);
+            Serial.print(c);
         }
     }
 
