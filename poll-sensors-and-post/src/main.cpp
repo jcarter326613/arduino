@@ -20,8 +20,26 @@ SensironScd30 sensironScd30;
 
 const uint16_t signalPin = 2;
 
+#if defined(USE_ESP32)
+    const uint8_t I2C_DATA = 33;
+    const uint8_t I2C_CLOCK = 32;
+#endif
+
 void setup() {
     pinMode(signalPin, OUTPUT);
+
+#if defined(USE_ESP32)
+    Wire.setPins(I2C_DATA, I2C_CLOCK);
+
+    Wire.begin();
+    for (uint8_t a = 1; a < 127; a++) {
+        Wire.beginTransmission(a);
+        if (Wire.endTransmission() == 0) {
+            Serial.printf("Found I2C device at 0x%02X\n", a);
+        }
+    }
+    Wire.end();
+#endif
 
     Serial.begin(9600);
     Serial.println();

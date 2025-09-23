@@ -21,7 +21,6 @@ bool SensevalScb4xv1::getReadings(uint16_t &voc, uint16_t &tempurature, uint16_t
         Wire.end();
     }
 
-
     return success;
 }
 
