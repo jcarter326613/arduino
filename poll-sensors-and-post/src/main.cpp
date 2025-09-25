@@ -2,7 +2,9 @@
 #include <Wire.h>
 #include <string>
 
+#include "esp_sleep.h"
 #include "esp_log.h"
+#include "driver/uart.h"
 
 #include "network-communication.h"
 #include "senseval-scb4xv1.h"
@@ -28,6 +30,10 @@ SensironScd30 sensironScd30;
 void setup() {
     esp_log_level_set("*", ESP_LOG_VERBOSE);
 
+    Serial.begin(9600);
+    Serial.println();
+    Serial.println();
+
 #if defined(USE_ESP32)
     Wire.setPins(I2C_DATA, I2C_CLOCK);
 
@@ -39,11 +45,9 @@ void setup() {
         }
     }
     Wire.end();
-#endif
 
-    Serial.begin(9600);
-    Serial.println();
-    Serial.println();
+    esp_sleep_enable_timer_wakeup(10ULL * 60ULL * 1000000ULL);  // 10 minutes
+#endif
 }
 
 void loop() {
@@ -152,5 +156,13 @@ void loop() {
         //delay(500);
     }
     
+#if defined(USE_ESP32)
+    Serial.println("Entering deep sleep");
+
+    Serial.flush();                                // empty Arduino Serial buffer
+    uart_wait_tx_idle_polling((uart_port_t)CONFIG_ESP_CONSOLE_UART_NUM); // wait for hardware TX FIFO
+    esp_deep_sleep_start();
+#else
     delay(1000 * 60 * 5);
+#endif
 }
