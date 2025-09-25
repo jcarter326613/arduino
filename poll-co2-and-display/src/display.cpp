@@ -22,18 +22,18 @@
  * - Pin 16 Ground
  */
 
-const uint16_t pinContrast = 3;
-const uint16_t pinRs = 5;
-const uint16_t pinRW = 4;
-const uint16_t pinE = 2;
-const uint16_t pinData4 = 11;
-const uint16_t pinData5 = 10;
-const uint16_t pinData6 = 9;
-const uint16_t pinData7 = 8;
+//const uint16_t pinContrast = 3;
+const uint16_t pinRs = 18;
+const uint16_t pinRW = 19;
+const uint16_t pinE = 23;
+const uint16_t pinData4 = 14;
+const uint16_t pinData5 = 27;
+const uint16_t pinData6 = 26;
+const uint16_t pinData7 = 25;
 
 Display::Display() {
     // Initialize the display pins
-    pinMode(pinContrast, OUTPUT);
+    //pinMode(pinContrast, OUTPUT);
     pinMode(pinRs, OUTPUT);
     pinMode(pinRW, OUTPUT);
     pinMode(pinE, OUTPUT);
@@ -43,7 +43,7 @@ Display::Display() {
     pinMode(pinData7, OUTPUT);
 
     // Set the contrast
-    analogWrite(pinContrast, 7);
+    //analogWrite(pinContrast, 7);
 
     // Clear the rest of the pins
     digitalWrite(pinRs, LOW);
