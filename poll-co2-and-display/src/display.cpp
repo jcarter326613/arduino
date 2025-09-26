@@ -91,9 +91,12 @@ void Display::setLine(uint8_t line, char *value) {
     for (int i = 0; i < 20; i++) {
         uint8_t c = value[i];
         if (c == '\0') {
-            break;
+            for (i < 20; i++) {
+                write(0);
+            }
+        } else {
+            write(c);
         }
-        write(c);
     }
 }
 
