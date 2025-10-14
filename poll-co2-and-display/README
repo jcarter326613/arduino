@@ -1,7 +1,8 @@
 To run
 ```
-.\arduino-cli.exe compile -b arduino:avr:uno d:\Code\mycode\arduino\poll-voc-and-display
+arduino-cli compile -b arduino:avr:uno d:\Code\mycode\arduino\poll-voc-and-display
 arduino-cli compile -b esp32:esp32:uPesy_wroom
+arduino-cli compile -b esp32:esp32:adafruit_feather_esp32s3_reversetft
 
 .\arduino-cli.exe upload -t -p COM3 -b arduino:avr:uno d:\Code\mycode\arduino\poll-voc-and-display
 arduino-cli upload -t -p COM1 -b esp32:esp32:uPesy_wroom
