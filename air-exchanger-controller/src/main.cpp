@@ -43,7 +43,6 @@ class ServerCallbacks : public NimBLEServerCallbacks {
 void setup() {
     Serial.begin(9600);
 
-    delay(5000);
     NimBLEDevice::init("ESP32_BLE_Server");
 
     NimBLEServer *pServer = NimBLEDevice::createServer();
