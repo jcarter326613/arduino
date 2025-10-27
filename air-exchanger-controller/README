@@ -7,6 +7,7 @@ arduino-cli compile -b esp32:esp32:adafruit_feather_esp32s3_reversetft
 arduino-cli upload -t -p COM3 -b arduino:avr:uno
 arduino-cli upload -t -p COM1 -b esp32:esp32:uPesy_wroom
 arduino-cli upload -t -p COM4 -b esp32:esp32:adafruit_feather_esp32s3_reversetft
+arduino-cli upload -t -p COM6 -b esp32:esp32:uPesy_wroom
 arduino-cli upload -t -p /dev/cu.usbserial-0001 -b esp32:esp32:uPesy_wroom
 
 putty COM3 -serial -sercfg 9600,8,n,1,N

@@ -39,6 +39,34 @@ bool SensevalScb4xv1::retrieveVoc(uint8_t tempAndHumidityBuffer[6], uint16_t &vo
     }
 }
 
+bool SensevalScb4xv1::retrieveSelfTest() {
+    uint8_t serialData[3] = {0, 0, 0};
+    uint8_t command[2] = {0x28, 0x0E};
+    uint8_t bytesRead;
+
+    bool checksumSuccess = retrieveI2cValueWithParameters(VOC_SENSOR_ADDRESS, command, 2, nullptr, 0, serialData, 3, bytesRead, 330);
+    if (checksumSuccess) {
+        return true;
+    } else {
+        Serial.println("Checksum is invalid for VOC.");
+        return false;
+    }
+}
+
+bool SensevalScb4xv1::retrieveSerialNumber() {
+    uint8_t serialData[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+    uint8_t command[2] = {0x36, 0x82};
+    uint8_t bytesRead;
+
+    bool checksumSuccess = retrieveI2cValueWithParameters(VOC_SENSOR_ADDRESS, command, 2, nullptr, 0, serialData, 9, bytesRead, 1);
+    if (checksumSuccess) {
+        return true;
+    } else {
+        Serial.println("Checksum is invalid for VOC.");
+        return false;
+    }
+}
+
 bool SensevalScb4xv1::retrieveTemperatureAndHumidity(uint8_t serialData[6], uint16_t &temperatureOut, uint16_t &humidityOut) {
     uint8_t command[1] = {0xFD};
     uint8_t bytesRead;

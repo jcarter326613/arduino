@@ -5,7 +5,7 @@ arduino-cli.exe board list
 
 To run
 ```
-arduino-cli.exe compile -b arduino:renesas_uno:unor4wifi e:\Code\mycode\arduino\poll-sensors-and-post
+arduino-cli compile -b arduino:renesas_uno:unor4wifi e:\Code\mycode\arduino\poll-sensors-and-post
 arduino-cli compile -b esp32:esp32:uPesy_wroom
 
 arduino-cli.exe upload -t -p COM3 -b arduino:renesas_uno:unor4wifi e:\Code\mycode\arduino\poll-sensors-and-post

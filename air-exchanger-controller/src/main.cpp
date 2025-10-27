@@ -41,8 +41,10 @@ class ServerCallbacks : public NimBLEServerCallbacks {
 };
 
 void setup() {
+    // Setup debug   writing
     Serial.begin(9600);
 
+    // Initialize bluetooth
     NimBLEDevice::init("ESP32_BLE_Server");
 
     NimBLEServer *pServer = NimBLEDevice::createServer();
@@ -61,7 +63,24 @@ void setup() {
     pAdvertising->addServiceUUID(serviceUuid);
     NimBLEDevice::startAdvertising();
     Serial.println("BLE server is advertising");
+
+    // Setup IO pins
+    pinMode(2, OUTPUT);
+    pinMode(18, OUTPUT);
 }
 
+static uint8_t isOn = 0;
+
 void loop() {
+
+    if (isOn == 0) {
+        digitalWrite(2, LOW);
+        digitalWrite(18, LOW);
+    } else {
+        digitalWrite(2, HIGH);
+        digitalWrite(18, HIGH);
+    }
+    isOn = (isOn + 1) % 2;
+
+    delay(5000);
 }
