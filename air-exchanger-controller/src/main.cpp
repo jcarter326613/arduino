@@ -4,11 +4,21 @@
 static NimBLEUUID serviceUuid("b207b7f1-acf6-48eb-8cd7-05fb3fef88f8");
 static NimBLEUUID onOffCharacteristicUuid("030113cf-4ea5-4c9b-9c9c-e1dd84ce4970");
 
+static uint8_t operationMode = 0;
+
 class OnOffCallbacks : public NimBLECharacteristicCallbacks {
     void onWrite(NimBLECharacteristic* pCharacteristic, NimBLEConnInfo &connInfo) {
         std::string value = pCharacteristic->getValue();
         Serial.print("onWrite from client: ");
         Serial.println(value.c_str());
+
+        if (value == "Off") {
+            operationMode = 0;
+        } else if (value == "On") {
+            operationMode = 1;
+        } else if (value == "Boost") {
+            operationMode = 2;
+        }
     }
     
     void onRead(NimBLECharacteristic* pCharacteristic, NimBLEConnInfo &connInfo) {
@@ -67,20 +77,24 @@ void setup() {
     // Setup IO pins
     pinMode(2, OUTPUT);
     pinMode(18, OUTPUT);
+    pinMode(19, OUTPUT);
 }
-
-static uint8_t isOn = 0;
 
 void loop() {
 
-    if (isOn == 0) {
+    if (operationMode == 0) {
         digitalWrite(2, LOW);
         digitalWrite(18, LOW);
-    } else {
+        digitalWrite(19, LOW);
+    } else if (operationMode == 1) {
         digitalWrite(2, HIGH);
         digitalWrite(18, HIGH);
+        digitalWrite(19, LOW);
+    } else if (operationMode == 2) {
+        digitalWrite(2, HIGH);
+        digitalWrite(18, HIGH);
+        digitalWrite(19, HIGH);
     }
-    isOn = (isOn + 1) % 2;
 
-    delay(5000);
+    delay(100);
 }

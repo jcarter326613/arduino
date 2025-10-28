@@ -99,8 +99,8 @@ void setup() {
 
 static const uint8_t msBetweenLoops = 100;
 static uint8_t cycleCount = 0;
-static const uint8_t targetMaxCount = (2 * 1000) / msBetweenLoops;
-static bool currentMode = 0;
+static const uint8_t targetMaxCount = (10 * 1000) / msBetweenLoops;
+static uint8_t currentMode = 0;
 
 void loop() {
     // If we successfully scanned a target, connect
@@ -121,14 +121,17 @@ void loop() {
         // If we have a write handle, toggle the write if we are at the right count.
         if (pRemoteChar != nullptr) {
             NimBLEAttValue value;
-            if (currentMode) {
+            if (currentMode == 0) {
                 value = NimBLEAttValue((uint8_t*)"Off", strlen("Off"));
                 Serial.println("Writing off");
-            } else {
+            } else if (currentMode == 1) {
                 value = NimBLEAttValue((uint8_t*)"On", strlen("On"));
                 Serial.println("Writing on");
+            } else if (currentMode == 2) {
+                value = NimBLEAttValue((uint8_t*)"Boost", strlen("Boost"));
+                Serial.println("Writing boost");
             }
-            currentMode = !currentMode;
+            currentMode = (currentMode + 1) % 3;
             pRemoteChar->writeValue(value, true);
         }
         
