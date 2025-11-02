@@ -3,7 +3,7 @@
 
 // Match these to your server code
 static NimBLEUUID serviceUuid("b207b7f1-acf6-48eb-8cd7-05fb3fef88f8");
-static NimBLEUUID onOffCharacteristicUuid("030113cf-4ea5-4c9b-9c9c-e1dd84ce4970");
+static NimBLEUUID co2LevelCharacteristicUuid("030113cf-4ea5-4c9b-9c9c-e1dd84ce4970");
 
 static NimBLEAddress targetAddr;
 static bool haveTarget = false;
@@ -32,7 +32,7 @@ class MyScanCallbacks : public NimBLEScanCallbacks {
 
 void destroyClientConnection() {
     if (pRemoteChar != nullptr) {
-        pSvc->deleteCharacteristic(onOffCharacteristicUuid);
+        pSvc->deleteCharacteristic(co2LevelCharacteristicUuid);
         pRemoteChar = nullptr;
     }
     if (pSvc != nullptr) {
@@ -67,7 +67,7 @@ bool connectToServer() {
         return false;
     }
 
-    pRemoteChar = pSvc->getCharacteristic(onOffCharacteristicUuid);
+    pRemoteChar = pSvc->getCharacteristic(co2LevelCharacteristicUuid);
     if (!pRemoteChar) {
         Serial.println("Characteristic not found");
         destroyClientConnection();
@@ -99,7 +99,7 @@ void setup() {
 
 static const uint8_t msBetweenLoops = 100;
 static uint8_t cycleCount = 0;
-static const uint8_t targetMaxCount = (10 * 1000) / msBetweenLoops;
+static const uint8_t targetMaxCount = (25 * 1000) / msBetweenLoops;
 static uint8_t currentMode = 0;
 
 void loop() {
@@ -122,16 +122,17 @@ void loop() {
         if (pRemoteChar != nullptr) {
             NimBLEAttValue value;
             if (currentMode == 0) {
-                value = NimBLEAttValue((uint8_t*)"Off", strlen("Off"));
+                value = NimBLEAttValue((uint8_t*)"ACCEPTABLE", strlen("ACCEPTABLE"));
                 Serial.println("Writing off");
             } else if (currentMode == 1) {
-                value = NimBLEAttValue((uint8_t*)"On", strlen("On"));
+                value = NimBLEAttValue((uint8_t*)"HIGH", strlen("HIGH"));
                 Serial.println("Writing on");
             } else if (currentMode == 2) {
-                value = NimBLEAttValue((uint8_t*)"Boost", strlen("Boost"));
+                value = NimBLEAttValue((uint8_t*)"CLIMBING", strlen("CLIMBING"));
                 Serial.println("Writing boost");
             }
             currentMode = (currentMode + 1) % 3;
+            value = NimBLEAttValue((uint8_t*)"HIGH", strlen("HIGH"));
             pRemoteChar->writeValue(value, true);
         }
         
