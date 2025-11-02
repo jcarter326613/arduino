@@ -1,9 +1,16 @@
 #include <Arduino.h>
 #include <NimBLEDevice.h>
+#include <Wire.h>
+
+#include "display.h"
+#include "sensiron-scd30.h"
 
 // Match these to your server code
 static NimBLEUUID serviceUuid("b207b7f1-acf6-48eb-8cd7-05fb3fef88f8");
 static NimBLEUUID co2LevelCharacteristicUuid("030113cf-4ea5-4c9b-9c9c-e1dd84ce4970");
+
+static const uint8_t I2C_DATA = 21;
+static const uint8_t I2C_CLOCK = 22;
 
 static NimBLEAddress targetAddr;
 static bool haveTarget = false;
@@ -12,6 +19,9 @@ static NimBLEClient* pClient = nullptr;
 static NimBLERemoteService* pSvc = nullptr;
 static NimBLERemoteCharacteristic* pRemoteChar = nullptr;
 static NimBLEScan* pScan = nullptr;
+
+Display *display;
+SensironScd30 sensironScd30;
 
 class MyScanCallbacks : public NimBLEScanCallbacks {
     void onResult(const NimBLEAdvertisedDevice* adv) override {
@@ -88,6 +98,8 @@ bool connectToServer() {
 void setup() {
     Serial.begin(9600);
     Serial.println("Booting up");
+
+    // Bluetooth
     NimBLEDevice::init("");
 
     pScan = NimBLEDevice::getScan();
@@ -95,18 +107,29 @@ void setup() {
     pScan->setInterval(45);
     pScan->setWindow(15);
     pScan->setScanCallbacks(new MyScanCallbacks(), false);
+
+    // I2C
+    Wire.setPins(I2C_DATA, I2C_CLOCK);
+
+    // Display
+    display = new Display();
 }
 
-static const uint8_t msBetweenLoops = 100;
-static uint8_t cycleCount = 0;
-static const uint8_t targetMaxCount = (25 * 1000) / msBetweenLoops;
-static uint8_t currentMode = 0;
+static const uint16_t msBetweenLoopDelays = 10;
+static const uint16_t msBetweenLoops = 1000 * 10;
+static const uint16_t numDelaysBetweenLoops = msBetweenLoops / msBetweenLoopDelays;
+static uint16_t loopDelayCount = numDelaysBetweenLoops;
 
-void loop() {
-    // If we successfully scanned a target, connect
+static uint8_t currentState = 0;
+static uint8_t desiredState = 0;
+static uint16_t targetCo2Level = 1000;
+static uint16_t shutoffCo2Level = 980;
+static uint16_t burstCo2Level = 1100;
+
+bool validateConnected() {
+    // If we successfully scanned a target but aren't connected, connect
     if (haveTarget && pRemoteChar == nullptr) {
-        Serial.println("t2");
-        connectToServer();
+        return connectToServer();
     }
 
     // If we were connected but aren't now, connect
@@ -114,39 +137,84 @@ void loop() {
         Serial.println("Disconnected. Rescanning...");
         destroyClientConnection();
         NimBLEDevice::getScan()->start(0, true);
+
+        return false;
     }
 
-    // At the beginning
-    if (cycleCount == 0) {
+    // If we don't have a target re-try scanning
+    else if (!haveTarget) {
+        Serial.println("Starting scan");
+        pScan->start((uint32_t)msBetweenLoops);
+
+        return false;
+    }
+
+    return true;
+}
+
+void loop() {
+    // Check if we entered this loop too early
+    if (loopDelayCount < numDelaysBetweenLoops) {
+        loopDelayCount++;
+        delay(msBetweenLoopDelays);
+        return;
+    }
+
+    Serial.println("Running loop");
+    loopDelayCount = 0;
+
+    // Get the current CO2 levels
+    float co2;
+    float co2Tempurature;
+    float co2Humidity;
+    bool success = sensironScd30.getReadings(co2, co2Tempurature, co2Humidity);
+
+    if (success) {
+        // Update the display
+        char output[50];
+        sprintf(output, "CO2 %d ppm", (uint32_t)co2);
+        display->setLine(1, output);
+        display->setLine(2, "");
+
+        // Update the desired state
+        if (co2 > burstCo2Level) {
+            desiredState = 3;
+        } else if (co2 > targetCo2Level) {
+            if (currentState < 2) {
+                desiredState = 2;
+            }
+        } else if (co2 < shutoffCo2Level) {
+            desiredState = 1;
+        }
+    } else {
+        display->setLine(2, "Reading stale");
+    }
+
+    if (desiredState != currentState && validateConnected()) {
         // If we have a write handle, toggle the write if we are at the right count.
         if (pRemoteChar != nullptr) {
             NimBLEAttValue value;
-            if (currentMode == 0) {
+            if (desiredState == 1) {
                 value = NimBLEAttValue((uint8_t*)"ACCEPTABLE", strlen("ACCEPTABLE"));
+                display->setLine(3, "Fan off");
                 Serial.println("Writing off");
-            } else if (currentMode == 1) {
+            } else if (desiredState == 2) {
                 value = NimBLEAttValue((uint8_t*)"HIGH", strlen("HIGH"));
                 Serial.println("Writing on");
-            } else if (currentMode == 2) {
+                display->setLine(3, "Fan on");
+            } else if (desiredState == 3) {
                 value = NimBLEAttValue((uint8_t*)"CLIMBING", strlen("CLIMBING"));
                 Serial.println("Writing boost");
+                display->setLine(3, "Fan boost");
             }
-            currentMode = (currentMode + 1) % 3;
-            value = NimBLEAttValue((uint8_t*)"HIGH", strlen("HIGH"));
             pRemoteChar->writeValue(value, true);
-        }
-        
-        // If we don't have a target, scan for one.
-        else if (!haveTarget) {
-            Serial.println("Starting scan");
-            pScan->start(((uint32_t)msBetweenLoops) * targetMaxCount);  // continuous, non-blocking scan
-        }
-
-        else {
-            Serial.println("Nothing happening");
+            currentState = desiredState;
+        } else {
+            Serial.println("Error communicating with controller");
+            display->setLine(2, "Error communicating");
         }
     }
-    cycleCount = (cycleCount + 1) % targetMaxCount;
 
-    delay(msBetweenLoops);
+    // Iterate
+    delay(msBetweenLoopDelays);
 }
