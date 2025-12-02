@@ -122,9 +122,12 @@ static uint16_t loopDelayCount = numDelaysBetweenLoops;
 
 static uint8_t currentState = 0;
 static uint8_t desiredState = 0;
-static uint16_t targetCo2Level = 1000;
-static uint16_t shutoffCo2Level = 980;
-static uint16_t burstCo2Level = 1100;
+///static uint16_t targetCo2Level = 1000;
+///static uint16_t shutoffCo2Level = 980;
+///static uint16_t burstCo2Level = 1100;
+static uint16_t targetCo2Level = 800;
+static uint16_t shutoffCo2Level = 780;
+static uint16_t burstCo2Level = 900;
 
 bool validateConnected() {
     // If we successfully scanned a target but aren't connected, connect
