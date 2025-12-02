@@ -22,18 +22,14 @@ bool SensironScd30::getReadings(float &co2, float &tempurature, float &humidity)
     // Get the values
     uint8_t buffer[6];
     Wire.begin();
-    Serial.println("Waiting for ready");
     bool success = waitForReady();
-    Serial.println("Waiting for ready complete");
     Wire.end();
     if (!success) {
         return false;
     }
 
     Wire.begin();
-    Serial.println("Retrieving CO2");
     success = retrieveCo2(co2, tempurature, humidity);
-    Serial.println("Retrieving CO2 complete");
     Wire.end();
     if (success) {
         tempurature = tempurature * 9 / 5 + 32;

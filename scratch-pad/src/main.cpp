@@ -1,42 +1,36 @@
 #include <Arduino.h>
-#include "esp_sleep.h"
-#include "driver/uart.h"
+#include "esp_adc_cal.h"
 
-RTC_DATA_ATTR int bootCount = 0;
-const int LED_PIN = 2;  // On most ESP32 DevKit boards the onboard LED is GPIO 2
+static esp_adc_cal_characteristics_t adc_chars;
+static const adc_unit_t unit = ADC_UNIT_1;
+static const adc_bits_width_t width = ADC_WIDTH_BIT_12;
+static const adc1_channel_t ch = ADC1_CHANNEL_4;     // GPIO32
+
+static const uint8_t inputPin = 34;
 
 void setup() {
-  pinMode(LED_PIN, OUTPUT);
+    Serial.begin(9600);
 
-  Serial.begin(9600);
-  delay(1000); // wait for serial
+    analogSetWidth(width);
+    analogSetPinAttenuation(inputPin, ADC_11db); 
+}
 
-  bootCount++;
-  Serial.printf("Boot number: %d\n", bootCount);
+static const float voltageDivider = (10000.0+5600.0) / ((10000.0+5600.0) + (22000.0+47000));
 
-  esp_reset_reason_t reason = esp_reset_reason();
-  Serial.printf("Reset reason: %d\n", reason);
-
-  esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
-  Serial.printf("Wakeup cause: %d\n", cause);
-  Serial.printf("Wakeup status touchpad: %d\n", esp_sleep_get_touchpad_wakeup_status());
-  Serial.printf("Wakeup status ext1: %d\n", esp_sleep_get_ext1_wakeup_status());
-  
-
-  Serial.println("Sleeping for 10 minutes...");
-  esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
-  esp_sleep_enable_timer_wakeup(10ULL * 60ULL * 1000000ULL);
-  //esp_sleep_enable_timer_wakeup(10ULL * 1000000ULL);
+float readVolts(int pin) {
+    int raw = analogRead(pin);              // 0..4095
+    return (raw / 4095.0f) * 1.1f * voltageDivider;          // approx; ESP32 ADC is non-linear
 }
 
 void loop() {
+    int mv = analogReadMilliVolts(inputPin); 
+    Serial.print("Analog read mV: "); 
+    Serial.println(mv);
 
-  Serial.flush();                                // empty Arduino Serial buffer
-  uart_wait_tx_idle_polling((uart_port_t)CONFIG_ESP_CONSOLE_UART_NUM); // wait for hardware TX FIFO
+    Serial.print("Analog read mV corrected: "); 
+    Serial.println(mv / voltageDivider);
+    Serial.print("analogRead: "); 
+    Serial.println(analogRead(inputPin));
 
-
-  esp_deep_sleep_start();
-
-  // Never reached
-  Serial.println("This will never print");
+    delay(1000);
 }
