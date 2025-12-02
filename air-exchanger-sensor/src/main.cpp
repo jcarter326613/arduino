@@ -47,6 +47,8 @@ static float displayedRadon = 0;
 static uint8_t currentFanSpeed = NOT_SET;
 static uint8_t currentBuildingLevel = NOT_SET;
 
+void destroyClientConnection();
+
 class MyScanCallbacks : public NimBLEScanCallbacks {
     void onResult(const NimBLEAdvertisedDevice* adv) override {
         bool svcMatch = adv->isAdvertisingService(serviceUuid);
@@ -61,6 +63,21 @@ class MyScanCallbacks : public NimBLEScanCallbacks {
             Serial.print("Non matching service ");
             Serial.println(adv->toString().c_str());
         }
+    }
+};
+
+class MyClientCallbacks : public NimBLEClientCallbacks {
+    void onConnect(NimBLEClient* client) override {
+        Serial.println("Client connected");
+    }
+
+    void onDisconnect(NimBLEClient* client, int reason) override {
+        Serial.printf("Client disconnected, reason = %d\n", reason);
+
+        currentFanSpeed = NOT_SET;
+        currentBuildingLevel = NOT_SET;
+
+        destroyClientConnection();
     }
 };
 
@@ -116,6 +133,7 @@ bool connectToServer() {
 
     // Client
     pClient = NimBLEDevice::createClient();
+    pClient->setClientCallbacks(new MyClientCallbacks(), false);
     if (!pClient->connect(targetAddr)) {
         Serial.println("Connect failed");
         destroyClientConnection();
@@ -349,6 +367,9 @@ void loop() {
         }
     } else {
         desiredBuildingLevel == BUILDING_LEVEL_1;
+    }
+    if (desiredBuildingLevel == NOT_SET) {
+        desiredBuildingLevel = BUILDING_LEVEL_1;
     }
 
     // Determine the final fan speed
