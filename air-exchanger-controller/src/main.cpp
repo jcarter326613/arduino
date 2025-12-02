@@ -17,8 +17,8 @@ static NimBLEUUID freshBootCharacteristicUuid("69f5f863-424e-47dd-a408-2d0dc45f7
 static uint8_t OPERATION_MODE_OFF = 0;
 static uint8_t OPERATION_MODE_ON = 1;
 static uint8_t OPERATION_MODE_BOOST = 2;
-static uint8_t DEVICE_ON = LOW;
-static uint8_t DEVICE_OFF = HIGH;
+static uint8_t DEVICE_ON = HIGH;
+static uint8_t DEVICE_OFF = LOW;
 static uint8_t LED_PIN = 2;
 static uint8_t FAN_PIN = 18;
 static uint8_t BOOST_PIN = 19;
