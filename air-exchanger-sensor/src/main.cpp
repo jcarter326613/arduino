@@ -7,8 +7,24 @@
 
 // Match these to your server code
 static NimBLEUUID serviceUuid("b207b7f1-acf6-48eb-8cd7-05fb3fef88f8");
-static NimBLEUUID co2LevelCharacteristicUuid("030113cf-4ea5-4c9b-9c9c-e1dd84ce4970");
-static NimBLEUUID radonLevelCharacteristicUuid("7e1b9f3a-5f6f-4b2c-a4db-8f8cb2d7f2a1");
+
+// Read/Write characteristics
+static NimBLEUUID fanSpeedCharacteristicUuid("061f0262-3fa8-4b48-a609-444658a8ba7e");
+static NimBLEUUID buildingLevelCharacteristicUuid("c05ca475-979f-44d3-be0b-7988ef98a170");
+
+// Read characteristics
+static NimBLEUUID radonLevelCharacteristicUuid("a5e32290-d139-43f5-acdb-8ec6043b7368");
+
+// Notify characteristics
+static NimBLEUUID freshBootCharacteristicUuid("69f5f863-424e-47dd-a408-2d0dc45f7720");
+
+#define NOT_SET 0
+#define FAN_SPEED_OFF 1
+#define FAN_SPEED_MEDIUM 2
+#define FAN_SPEED_HIGH 3
+#define BUILDING_LEVEL_BASEMENT 1
+#define BUILDING_LEVEL_1 2
+#define MAX_RADON_LEVEL 1.3
 
 static const uint8_t I2C_DATA = 21;
 static const uint8_t I2C_CLOCK = 22;
@@ -18,16 +34,18 @@ static bool haveTarget = false;
 
 static NimBLEClient* pClient = nullptr;
 static NimBLERemoteService* pSvc = nullptr;
-static NimBLERemoteCharacteristic* pCo2RemoteChar = nullptr;
-static NimBLERemoteCharacteristic* pRadonRemoteChar = nullptr;
+static NimBLERemoteCharacteristic* pFanSpeedChar = nullptr;
+static NimBLERemoteCharacteristic* pBuildingLevelChar = nullptr;
+static NimBLERemoteCharacteristic* pRadonChar = nullptr;
+static NimBLERemoteCharacteristic* pFreshBootChar = nullptr;
 static NimBLEScan* pScan = nullptr;
 
 Display *display;
 SensironScd30 sensironScd30;
 static float radonValue = 0;
 static float displayedRadon = 0;
-static uint8_t currentState = 0;
-static uint8_t desiredState = 0;
+static uint8_t currentFanSpeed = NOT_SET;
+static uint8_t currentBuildingLevel = NOT_SET;
 
 class MyScanCallbacks : public NimBLEScanCallbacks {
     void onResult(const NimBLEAdvertisedDevice* adv) override {
@@ -56,14 +74,27 @@ static void onRadonNotify(NimBLERemoteCharacteristic* chr, uint8_t* data, size_t
     }
 }
 
+static void onFreshBootNotify(NimBLERemoteCharacteristic* chr, uint8_t* data, size_t len, bool isNotify) {
+    currentFanSpeed = NOT_SET;
+    currentBuildingLevel = NOT_SET;
+}
+
 void destroyClientConnection() {
-    if (pCo2RemoteChar != nullptr) {
-        pSvc->deleteCharacteristic(co2LevelCharacteristicUuid);
-        pCo2RemoteChar = nullptr;
+    if (pFanSpeedChar != nullptr) {
+        pSvc->deleteCharacteristic(fanSpeedCharacteristicUuid);
+        pFanSpeedChar = nullptr;
     }
-    if (pRadonRemoteChar != nullptr) {
+    if (pBuildingLevelChar != nullptr) {
+        pSvc->deleteCharacteristic(fanSpeedCharacteristicUuid);
+        pFanSpeedChar = nullptr;
+    }
+    if (pRadonChar != nullptr) {
         pSvc->deleteCharacteristic(radonLevelCharacteristicUuid);
-        pRadonRemoteChar = nullptr;
+        pRadonChar = nullptr;
+    }
+    if (pFreshBootChar != nullptr) {
+        pSvc->deleteCharacteristic(freshBootCharacteristicUuid);
+        pFreshBootChar = nullptr;
     }
     if (pSvc != nullptr) {
         pClient->deleteService(serviceUuid);
@@ -99,54 +130,109 @@ bool connectToServer() {
         return false;
     }
 
-    // Co2
-    pCo2RemoteChar = pSvc->getCharacteristic(co2LevelCharacteristicUuid);
-    if (!pCo2RemoteChar) {
+    // Fan Speed
+    pFanSpeedChar = pSvc->getCharacteristic(fanSpeedCharacteristicUuid);
+    if (!pFanSpeedChar) {
         Serial.println("Characteristic not found");
         destroyClientConnection();
         return false;
     }
-    Serial.printf("co2 canWriteNoResponse=%d, canWrite=%d\n", pCo2RemoteChar->canWriteNoResponse(), pCo2RemoteChar->canWrite());
+    Serial.printf("fan speed canWriteNoResponse=%d, canWrite=%d\n", pFanSpeedChar->canWriteNoResponse(), pFanSpeedChar->canWrite());
 
-    if (!pCo2RemoteChar->canWrite()) {
-        Serial.println("Co2 characteristic not writable");
+    if (!pFanSpeedChar->canWrite()) {
+        Serial.println("Fan Speed characteristic not writable");
+        destroyClientConnection();
+        return false;
+    }
+
+    // Building Level
+    pBuildingLevelChar = pSvc->getCharacteristic(buildingLevelCharacteristicUuid);
+    if (!pBuildingLevelChar) {
+        Serial.println("Characteristic not found");
+        destroyClientConnection();
+        return false;
+    }
+    Serial.printf("fan speed canWriteNoResponse=%d, canWrite=%d\n", pBuildingLevelChar->canWriteNoResponse(), pBuildingLevelChar->canWrite());
+
+    if (!pBuildingLevelChar->canWrite()) {
+        Serial.println("Building Level characteristic not writable");
         destroyClientConnection();
         return false;
     }
 
     // Radon
-    pRadonRemoteChar = pSvc->getCharacteristic(radonLevelCharacteristicUuid);
-    if (!pRadonRemoteChar) {
+    pRadonChar = pSvc->getCharacteristic(radonLevelCharacteristicUuid);
+    if (!pRadonChar) {
         Serial.println("Radon characteristic not found");
         destroyClientConnection();
         return false;
     }
-    Serial.printf("radon canRead=%d, canNotify=%d\n", pRadonRemoteChar->canRead(), pRadonRemoteChar->canNotify());
+    Serial.printf("radon canRead=%d, canNotify=%d\n", pRadonChar->canRead(), pRadonChar->canNotify());
 
-    if (!pRadonRemoteChar->canRead() || !pRadonRemoteChar->canNotify()) {
+    if (!pRadonChar->canRead() || !pRadonChar->canNotify()) {
         Serial.println("Radon characteristic not readable or not notifiable");
         destroyClientConnection();
         return false;
     }
-    if (!pRadonRemoteChar->subscribe(true, onRadonNotify)) {
+    if (!pRadonChar->subscribe(true, onRadonNotify)) {
         Serial.println("Failed to subscribe to radon notifications");
         destroyClientConnection();
         return false;
     }
-    std::string rv = pRadonRemoteChar->readValue();
+    std::string rv = pRadonChar->readValue();
     if (rv.size() == sizeof(float)) {
         memcpy(&radonValue, rv.data(), sizeof(float));
     }
 
+    // Fresh Boot
+    pFreshBootChar = pSvc->getCharacteristic(freshBootCharacteristicUuid);
+    if (!pFreshBootChar) {
+        Serial.println("Frsh boot characteristic not found");
+        destroyClientConnection();
+        return false;
+    }
+    Serial.printf("fresh boot canRead=%d, canNotify=%d\n", pFreshBootChar->canRead(), pFreshBootChar->canNotify());
+
+    if (!pFreshBootChar->canRead() || !pFreshBootChar->canNotify()) {
+        Serial.println("Fresh boot characteristic not readable or not notifiable");
+        destroyClientConnection();
+        return false;
+    }
+    if (!pFreshBootChar->subscribe(true, onFreshBootNotify)) {
+        Serial.println("Failed to subscribe to fresh boot notifications");
+        destroyClientConnection();
+        return false;
+    }
+
+    // Done
     Serial.println("Connected");
-    currentState = 0;   // Reset current state so we update it
     return true;
 }
+
+static const uint16_t msBetweenLoopDelays = 10;     // 10 milliseconds that the chip is completely frozen
+static const uint16_t msBetweenLoops = 1000 * 10;   // 10 seconds between loop runs
+static const uint16_t numDelaysBetweenLoops = msBetweenLoops / msBetweenLoopDelays;     // Number of times the loop function needs to be entered before we actually do any work
+static uint16_t loopDelayCount = numDelaysBetweenLoops; // Start with the initial state of "run a loop"
+static const uint32_t mSecondsPerMinute = 1000 * 60;
+static const uint32_t mSecondsPerHour = mSecondsPerMinute * 60;
+static const uint32_t loopsPerHour = mSecondsPerHour / msBetweenLoops;
+static const uint32_t loopsAllowedForRadonPerHour = (mSecondsPerMinute / msBetweenLoops) * 10;  // 10 minutes allowed per hour
+static const uint32_t maxLoopsBankedForRadon = loopsPerHour - loopsAllowedForRadonPerHour;
+static const uint32_t loopsSpentPerRadonLoop = maxLoopsBankedForRadon / loopsAllowedForRadonPerHour;
+
+static uint8_t desiredFanSpeed = NOT_SET;
+static uint8_t desiredLevel1FanSpeed = NOT_SET;
+static uint8_t desiredBuildingLevel = NOT_SET;
+static uint16_t targetCo2Level = 800;
+static uint16_t shutoffCo2Level = 780;
+static uint16_t burstCo2Level = 900;
+static float co2 = 0;
+static uint32_t radonPoints = 0;
 
 void setup() {
     Serial.begin(9600);
     Serial.println("Booting up");
-
+    
     // Bluetooth
     NimBLEDevice::init("");
 
@@ -163,20 +249,17 @@ void setup() {
     display = new Display();
 }
 
-static const uint16_t msBetweenLoopDelays = 10;
-static const uint16_t msBetweenLoops = 1000 * 10;
-static const uint16_t numDelaysBetweenLoops = msBetweenLoops / msBetweenLoopDelays;
-static uint16_t loopDelayCount = numDelaysBetweenLoops;
-
-static uint8_t currentState = 0;
-static uint8_t desiredState = 0;
-static uint16_t targetCo2Level = 800;
-static uint16_t shutoffCo2Level = 780;
-static uint16_t burstCo2Level = 900;
-
 bool validateConnected() {
     // If we successfully scanned a target but aren't connected, connect
-    if (haveTarget && pCo2RemoteChar == nullptr && pRadonRemoteChar == nullptr) {
+    if (
+        haveTarget &&
+        (
+            pFanSpeedChar == nullptr ||
+            pBuildingLevelChar == nullptr ||
+            pRadonChar == nullptr ||
+            pFreshBootChar == nullptr
+        )
+    ) {
         return connectToServer();
     }
 
@@ -201,22 +284,6 @@ bool validateConnected() {
 }
 
 void loop() {
-    // Update the radon display if needed
-    if (displayedRadon != radonValue) {
-        displayedRadon = radonValue;
-
-        if (radonValue == NAN) {
-            display->setLine(2, "");
-        } else {
-            char buf[32];
-            snprintf(buf, sizeof(buf), "Radon %.1f pCi/L", displayedRadon / 1000.0);
-            if (display)  {
-                display->setLine(2, buf);
-            }
-        }
-        Serial.println("In radon display loop");
-    }
-
     // Check if we should continue with the sensor reading
     if (loopDelayCount < numDelaysBetweenLoops) {
         loopDelayCount++;
@@ -224,65 +291,135 @@ void loop() {
         return;
     }
 
-    Serial.println("Running sensor reading");
     loopDelayCount = 0;
 
-    // Get the current CO2 levels
-    float co2;
-    float co2Tempurature;
-    float co2Humidity;
-    bool success = sensironScd30.getReadings(co2, co2Tempurature, co2Humidity);
+    // Update the radon display if needed
+    if (displayedRadon != radonValue) {
+        displayedRadon = radonValue;
 
-    if (success) {
-        // Update the display
-        char output[50];
-        sprintf(output, "CO2 %d ppm", (uint32_t)co2);
-        display->setLine(1, output);
-        display->setLine(0, "");
-
-        // Update the desired state
-        if (co2 > burstCo2Level) {
-            desiredState = 3;
-        } else if (co2 > targetCo2Level) {
-            if (currentState < 2) {
-                desiredState = 2;
-            }
-        } else if (co2 < shutoffCo2Level) {
-            desiredState = 1;
+        if (radonValue == NAN || radonValue == 0) {
+            display->setLine(1, "");
+            radonValue = 0;
         } else {
-            Serial.print("Invalid co2 level ");
-            Serial.println(co2);
+            char buf[32];
+            snprintf(buf, sizeof(buf), "Radon %.1f pCi/L", displayedRadon / 1000.0);
+            if (display)  {
+                display->setLine(1, buf);
+            }
         }
-        Serial.print("desired state ");
-        Serial.print(desiredState);
-        Serial.print("  Current state ");
-        Serial.println(currentState);
-    } else {
-        display->setLine(0, "Reading stale");
     }
 
-    if (desiredState != currentState && validateConnected()) {
-        // If we have a write handle, toggle the write if we are at the right count.
-        if (pCo2RemoteChar != nullptr) {
-            NimBLEAttValue value;
-            if (desiredState == 1) {
-                value = NimBLEAttValue((uint8_t*)"ACCEPTABLE", strlen("ACCEPTABLE"));
-                display->setLine(3, "Fan off");
-                Serial.println("Writing off");
-            } else if (desiredState == 2) {
-                value = NimBLEAttValue((uint8_t*)"HIGH", strlen("HIGH"));
-                Serial.println("Writing on");
-                display->setLine(3, "Fan on");
-            } else if (desiredState == 3) {
-                value = NimBLEAttValue((uint8_t*)"CLIMBING", strlen("CLIMBING"));
-                Serial.println("Writing boost");
-                display->setLine(3, "Fan boost");
+    const bool radonTooHigh = radonValue > MAX_RADON_LEVEL;
+
+    // Get the current CO2 levels
+    float newCo2;
+    float co2Tempurature;
+    float co2Humidity;
+    bool success = sensironScd30.getReadings(newCo2, co2Tempurature, co2Humidity);
+
+    if (success) {
+        co2 = newCo2;
+    }
+
+    // Update the display
+    char output[50];
+    sprintf(output, "CO2 %d ppm", (uint32_t)co2);
+    display->setLine(0, output);
+
+    // Update the desired fan speed based on CO2 levels
+    if (co2 > burstCo2Level) {
+        desiredLevel1FanSpeed = FAN_SPEED_HIGH;
+    } else if (co2 > targetCo2Level) {
+        if (currentFanSpeed < FAN_SPEED_HIGH) {
+            desiredLevel1FanSpeed = FAN_SPEED_MEDIUM;
+        }
+    } else if (co2 < shutoffCo2Level) {
+        desiredLevel1FanSpeed = FAN_SPEED_OFF;
+    }
+
+    // Determine the desired building level
+    if (radonTooHigh) {
+        if (
+            desiredLevel1FanSpeed == FAN_SPEED_OFF ||
+            radonPoints >= maxLoopsBankedForRadon
+        ) {
+            desiredBuildingLevel = BUILDING_LEVEL_BASEMENT;
+        } else if (radonPoints == 0) {
+            desiredBuildingLevel == BUILDING_LEVEL_1;
+        }
+    } else {
+        desiredBuildingLevel == BUILDING_LEVEL_1;
+    }
+
+    // Determine the final fan speed
+    if (desiredBuildingLevel == BUILDING_LEVEL_BASEMENT) {
+        desiredFanSpeed = FAN_SPEED_HIGH;
+    } else {
+        desiredFanSpeed = desiredLevel1FanSpeed;
+    }
+
+    // Update the fan speed and building level
+    if (validateConnected()) {
+        bool errorCommunicating = false;
+        if (desiredBuildingLevel != currentBuildingLevel) {
+            if (pBuildingLevelChar != nullptr) {
+                NimBLEAttValue value;
+                if (desiredBuildingLevel == BUILDING_LEVEL_BASEMENT) {
+                    value = NimBLEAttValue((uint8_t*)"BASEMENT", strlen("BASEMENT"));
+                    display->setLine(3, "Venting Basement");
+                    Serial.println("Writing basement");
+                } else if (desiredBuildingLevel == BUILDING_LEVEL_1) {
+                    value = NimBLEAttValue((uint8_t*)"1", strlen("1"));
+                    display->setLine(3, "Venting Living Space");
+                    Serial.println("Writing living space");
+                }
+                pBuildingLevelChar->writeValue(value, true);
+                currentBuildingLevel = desiredBuildingLevel;
+            } else {
+                errorCommunicating = true;
             }
-            pCo2RemoteChar->writeValue(value, true);
-            currentState = desiredState;
-        } else {
+        }
+
+        if (desiredFanSpeed != currentFanSpeed) {
+            if (pFanSpeedChar != nullptr) {
+                NimBLEAttValue value;
+                if (desiredFanSpeed == FAN_SPEED_OFF) {
+                    value = NimBLEAttValue((uint8_t*)"OFF", strlen("OFF"));
+                    display->setLine(2, "Fan off");
+                    Serial.println("Writing off");
+                } else if (desiredFanSpeed == FAN_SPEED_MEDIUM) {
+                    value = NimBLEAttValue((uint8_t*)"MEDIUM", strlen("MEDIUM"));
+                    display->setLine(2, "Fan on");
+                    Serial.println("Writing on");
+                } else if (desiredFanSpeed == FAN_SPEED_HIGH) {
+                    value = NimBLEAttValue((uint8_t*)"HIGH", strlen("HIGH"));
+                    display->setLine(2, "Fan boost");
+                    Serial.println("Writing boost");
+                }
+                pFanSpeedChar->writeValue(value, true);
+                currentFanSpeed = desiredFanSpeed;
+            } else {
+                errorCommunicating = true;
+            }
+        }
+
+        // Accrue or spend radon points and update the display on error
+        if (errorCommunicating) {
             Serial.println("Error communicating with controller");
-            display->setLine(1, "Error communicating");
+            display->setLine(0, "Error communicating");
+            display->setLine(1, "");
+            display->setLine(2, "");
+            display->setLine(3, "");
+        } else if (currentBuildingLevel == BUILDING_LEVEL_BASEMENT) {
+            if (radonPoints < loopsSpentPerRadonLoop) {
+                radonPoints = 0;
+            } else {
+                radonPoints -= loopsSpentPerRadonLoop;
+            }
+        } else if (currentBuildingLevel == BUILDING_LEVEL_1) {
+            if (radonPoints < maxLoopsBankedForRadon) {
+                radonPoints++;
+            }
         }
     }
 
