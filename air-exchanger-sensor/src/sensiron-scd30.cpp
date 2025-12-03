@@ -259,12 +259,14 @@ bool SensironScd30::verifyChecksum(byte data[], uint16_t length) {
         return false;
     }
 
+    /*
     char output[50];
     for (int i = 0; i < length; i++) {
         sprintf(output, "%02X", data[i]);
         Serial.print(output);
     }
     Serial.println();
+    */
 
     for (uint16_t i = 0; i < length; i += 3) {
         if (!verifyChecksumPiece(data + i, data[i + 2])) {

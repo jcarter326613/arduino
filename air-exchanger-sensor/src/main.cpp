@@ -24,7 +24,8 @@ static NimBLEUUID freshBootCharacteristicUuid("69f5f863-424e-47dd-a408-2d0dc45f7
 #define FAN_SPEED_HIGH 3
 #define BUILDING_LEVEL_BASEMENT 1
 #define BUILDING_LEVEL_1 2
-#define MAX_RADON_LEVEL 1.3
+#define MAX_RADON_LEVEL (1.3 / 1000.0)
+#define RADON_VERY_HIGH (4.0 / 1000.0)
 
 static const uint8_t I2C_DATA = 21;
 static const uint8_t I2C_CLOCK = 22;
@@ -237,6 +238,8 @@ static const uint32_t loopsPerHour = mSecondsPerHour / msBetweenLoops;
 static const uint32_t loopsAllowedForRadonPerHour = (mSecondsPerMinute / msBetweenLoops) * 10;  // 10 minutes allowed per hour
 static const uint32_t maxLoopsBankedForRadon = loopsPerHour - loopsAllowedForRadonPerHour;
 static const uint32_t loopsSpentPerRadonLoop = maxLoopsBankedForRadon / loopsAllowedForRadonPerHour;
+//static const uint32_t maxLoopsBankedForRadon = 200;
+//static const uint32_t loopsSpentPerRadonLoop = 2;
 
 static uint8_t desiredFanSpeed = NOT_SET;
 static uint8_t desiredLevel1FanSpeed = NOT_SET;
@@ -328,6 +331,7 @@ void loop() {
     }
 
     const bool radonTooHigh = radonValue > MAX_RADON_LEVEL;
+    const bool radonExtremelyHigh = radonValue > RADON_VERY_HIGH;
 
     // Get the current CO2 levels
     float newCo2;
@@ -357,6 +361,10 @@ void loop() {
 
     // Determine the desired building level
     if (radonTooHigh) {
+        if (radonExtremelyHigh && co2 <= burstCo2Level) {
+            radonPoints = maxLoopsBankedForRadon;
+        }
+
         if (
             desiredLevel1FanSpeed == FAN_SPEED_OFF ||
             radonPoints >= maxLoopsBankedForRadon
