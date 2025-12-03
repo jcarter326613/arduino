@@ -363,10 +363,10 @@ void loop() {
         ) {
             desiredBuildingLevel = BUILDING_LEVEL_BASEMENT;
         } else if (radonPoints == 0) {
-            desiredBuildingLevel == BUILDING_LEVEL_1;
+            desiredBuildingLevel = BUILDING_LEVEL_1;
         }
     } else {
-        desiredBuildingLevel == BUILDING_LEVEL_1;
+        desiredBuildingLevel = BUILDING_LEVEL_1;
     }
     if (desiredBuildingLevel == NOT_SET) {
         desiredBuildingLevel = BUILDING_LEVEL_1;
@@ -442,8 +442,8 @@ void loop() {
                 radonPoints++;
             }
         }
-        char output[50];
-        sprintf(output, "radonPoints %d ppm", (uint32_t)radonPoints);
+        char output[100];
+        sprintf(output, "radonPoints %d, maxLoopsBankedForRadon %d, loopsSpentPerRadonLoop %d", radonPoints, maxLoopsBankedForRadon, loopsSpentPerRadonLoop);
         Serial.println(output);
     }
 
