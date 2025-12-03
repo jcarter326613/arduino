@@ -442,6 +442,9 @@ void loop() {
                 radonPoints++;
             }
         }
+        char output[50];
+        sprintf(output, "radonPoints %d ppm", (uint32_t)radonPoints);
+        Serial.println(output);
     }
 
     // Iterate
