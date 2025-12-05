@@ -24,8 +24,8 @@ static NimBLEUUID freshBootCharacteristicUuid("69f5f863-424e-47dd-a408-2d0dc45f7
 #define FAN_SPEED_HIGH 3
 #define BUILDING_LEVEL_BASEMENT 1
 #define BUILDING_LEVEL_1 2
-#define MAX_RADON_LEVEL (1.3 / 1000.0)
-#define RADON_VERY_HIGH (4.0 / 1000.0)
+#define MAX_RADON_LEVEL (1.3 * 1000.0)
+#define RADON_VERY_HIGH (4.0 * 1000.0)
 
 static const uint8_t I2C_DATA = 21;
 static const uint8_t I2C_CLOCK = 22;
@@ -305,6 +305,8 @@ bool validateConnected() {
 }
 
 void loop() {
+    char output[50];
+    
     // Check if we should continue with the sensor reading
     if (loopDelayCount < numDelaysBetweenLoops) {
         loopDelayCount++;
@@ -333,6 +335,11 @@ void loop() {
     const bool radonTooHigh = radonValue > MAX_RADON_LEVEL;
     const bool radonExtremelyHigh = radonValue > RADON_VERY_HIGH;
 
+    sprintf(output, "radonTooHigh %d, radonExtremelyHigh %d, radonValue %f", radonTooHigh, radonExtremelyHigh, radonValue);
+    Serial.println(output);
+    sprintf(output, "MAX_RADON_LEVEL %f, RADON_VERY_HIGH %f", MAX_RADON_LEVEL, RADON_VERY_HIGH);
+    Serial.println(output);
+
     // Get the current CO2 levels
     float newCo2;
     float co2Tempurature;
@@ -344,7 +351,6 @@ void loop() {
     }
 
     // Update the display
-    char output[50];
     sprintf(output, "CO2 %d ppm", (uint32_t)co2);
     display->setLine(0, output);
 
@@ -453,6 +459,12 @@ void loop() {
         char output[100];
         sprintf(output, "radonPoints %d, maxLoopsBankedForRadon %d, loopsSpentPerRadonLoop %d", radonPoints, maxLoopsBankedForRadon, loopsSpentPerRadonLoop);
         Serial.println(output);
+    } else {
+        Serial.println("Error communicating with controller");
+        display->setLine(0, "Error communicating");
+        display->setLine(1, "");
+        display->setLine(2, "");
+        display->setLine(3, "");
     }
 
     // Iterate
