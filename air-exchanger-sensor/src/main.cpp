@@ -25,7 +25,10 @@ static NimBLEUUID freshBootCharacteristicUuid("69f5f863-424e-47dd-a408-2d0dc45f7
 #define BUILDING_LEVEL_BASEMENT 1
 #define BUILDING_LEVEL_1 2
 #define MAX_RADON_LEVEL (1.3 * 1000.0)
-#define RADON_VERY_HIGH (4.0 * 1000.0)
+#define RADON_VERY_HIGH (3.0 * 1000.0)
+static uint16_t targetCo2Level = 800;
+static uint16_t shutoffCo2Level = 780;
+static uint16_t burstCo2Level = 1000;
 
 static const uint8_t I2C_DATA = 21;
 static const uint8_t I2C_CLOCK = 22;
@@ -244,9 +247,6 @@ static const uint32_t loopsSpentPerRadonLoop = maxLoopsBankedForRadon / loopsAll
 static uint8_t desiredFanSpeed = NOT_SET;
 static uint8_t desiredLevel1FanSpeed = NOT_SET;
 static uint8_t desiredBuildingLevel = NOT_SET;
-static uint16_t targetCo2Level = 800;
-static uint16_t shutoffCo2Level = 780;
-static uint16_t burstCo2Level = 900;
 static float co2 = 0;
 static uint32_t radonPoints = 0;
 
@@ -359,7 +359,7 @@ void loop() {
         desiredLevel1FanSpeed = FAN_SPEED_HIGH;
     } else if (co2 > targetCo2Level) {
         if (currentFanSpeed < FAN_SPEED_HIGH) {
-            desiredLevel1FanSpeed = FAN_SPEED_MEDIUM;
+            desiredLevel1FanSpeed = (co2 > targetCo2Level + 100) ? FAN_SPEED_HIGH : FAN_SPEED_MEDIUM;
         }
     } else if (co2 < shutoffCo2Level) {
         desiredLevel1FanSpeed = FAN_SPEED_OFF;
