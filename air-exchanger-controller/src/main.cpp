@@ -20,13 +20,14 @@ static uint8_t OPERATION_MODE_BOOST = 2;
 static uint8_t DEVICE_ON = LOW;
 static uint8_t DEVICE_OFF = HIGH;
 static uint8_t LED_PIN = 2;
-static uint8_t FAN_PIN = 18;
-static uint8_t BOOST_PIN = 19;
+static uint8_t FAN_PIN = 18;    // Change to 27
+static uint8_t BOOST_PIN = 19;  // Change to 14
 static uint8_t RADON_READING_PIN = 34;
 static uint8_t AIR_IN_LEVEL1_OPEN = 32;
 static uint8_t AIR_IN_BASEMENT_OPEN = 33;
 static uint8_t AIR_OUT_LEVEL1_OPEN = 25;
 static uint8_t AIR_OUT_BASEMENT_OPEN = 26;
+static uint8_t REST_HOLD_PIN = 27;  // Change this to fan pin
 
 static uint8_t FAN_SPEED_OFF = 0;
 static uint8_t FAN_SPEED_MEDIUM = 1;
@@ -117,6 +118,10 @@ String generateUUID() {
 void setup() {
     // Setup debug   writing
     Serial.begin(9600);
+
+    // Set the reset pin low
+    pinMode(REST_HOLD_PIN, OUTPUT);
+    digitalWrite(REST_HOLD_PIN, LOW);
 
     // Create the bluetooth service
     NimBLEDevice::init("Vent_Controller");
