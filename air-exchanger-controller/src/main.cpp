@@ -20,8 +20,8 @@ static uint8_t OPERATION_MODE_BOOST = 2;
 static uint8_t DEVICE_ON = LOW;
 static uint8_t DEVICE_OFF = HIGH;
 static uint8_t LED_PIN = 2;
-static uint8_t FAN_PIN = 18;    // Change to 27
-static uint8_t BOOST_PIN = 19;  // Change to 14
+static uint8_t FAN_PIN = 14;  //Was 18
+static uint8_t BOOST_PIN = 27;  //Was 19
 static uint8_t RADON_READING_PIN = 34;
 static uint8_t AIR_IN_LEVEL1_OPEN = 32;
 static uint8_t AIR_IN_BASEMENT_OPEN = 33;
@@ -34,7 +34,7 @@ static uint8_t FAN_SPEED_MEDIUM = 1;
 static uint8_t FAN_SPEED_HIGH = 2;
 
 static uint8_t BUILD_LEVEL_BASEMENT = 0;
-static uint8_t BUILD_LEVEL_1 = 1;
+static uint8_t BUILD_LEVEL_1 = 1; 
 
 static uint8_t fanSpeed = FAN_SPEED_MEDIUM;
 static uint8_t buildingLevel = BUILD_LEVEL_1;
