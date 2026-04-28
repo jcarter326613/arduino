@@ -24,7 +24,8 @@ static NimBLEUUID freshBootCharacteristicUuid("69f5f863-424e-47dd-a408-2d0dc45f7
 #define FAN_SPEED_HIGH 3
 #define BUILDING_LEVEL_BASEMENT 1
 #define BUILDING_LEVEL_1 2
-#define MAX_RADON_LEVEL (1.3 * 1000.0)
+#define SHUTOFF_RADON_LEVEL (1.5 * 1000.0)
+#define MAX_RADON_LEVEL (2.0 * 1000.0)
 #define RADON_VERY_HIGH (3.0 * 1000.0)
 static uint16_t targetCo2Level = 800;
 static uint16_t shutoffCo2Level = 780;
@@ -332,6 +333,7 @@ void loop() {
         }
     }
 
+    const bool radonShutoff = radonValue <= SHUTOFF_RADON_LEVEL;
     const bool radonTooHigh = radonValue > MAX_RADON_LEVEL;
     const bool radonExtremelyHigh = radonValue > RADON_VERY_HIGH;
 
@@ -359,22 +361,22 @@ void loop() {
         desiredLevel1FanSpeed = FAN_SPEED_HIGH;
     } else if (co2 > targetCo2Level) {
         if (currentFanSpeed < FAN_SPEED_HIGH) {
-            desiredLevel1FanSpeed = (co2 > targetCo2Level + 100) ? FAN_SPEED_HIGH : FAN_SPEED_MEDIUM;
+            desiredLevel1FanSpeed = /*(co2 > targetCo2Level + 100) ? FAN_SPEED_HIGH :*/ FAN_SPEED_MEDIUM;
         }
     } else if (co2 < shutoffCo2Level) {
         desiredLevel1FanSpeed = FAN_SPEED_OFF;
     }
 
     // Determine the desired building level
-    if (radonTooHigh) {
-        if (radonExtremelyHigh && co2 <= burstCo2Level) {
+    if (!radonShutoff) {
+        if (
+            (radonExtremelyHigh && co2 <= burstCo2Level) ||
+            (radonTooHigh && co2 < targetCo2Level)
+        ) {
             radonPoints = maxLoopsBankedForRadon;
         }
 
-        if (
-            desiredLevel1FanSpeed == FAN_SPEED_OFF ||
-            radonPoints >= maxLoopsBankedForRadon
-        ) {
+        if (radonPoints >= maxLoopsBankedForRadon) {
             desiredBuildingLevel = BUILDING_LEVEL_BASEMENT;
         } else if (radonPoints == 0) {
             desiredBuildingLevel = BUILDING_LEVEL_1;
