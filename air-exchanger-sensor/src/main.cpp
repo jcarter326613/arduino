@@ -450,11 +450,13 @@ void loop() {
         } else if (currentBuildingLevel == BUILDING_LEVEL_BASEMENT) {
             if (radonPoints < loopsSpentPerRadonLoop) {
                 radonPoints = 0;
-            } else {
+            } else if (co2 > shutoffCo2Level) {
                 radonPoints -= loopsSpentPerRadonLoop;
             }
         } else if (currentBuildingLevel == BUILDING_LEVEL_1) {
-            if (radonPoints < maxLoopsBankedForRadon) {
+            if (!radonTooHigh) {
+                radonPoints = 0;
+            } else if (radonPoints < maxLoopsBankedForRadon) {
                 radonPoints++;
             }
         }
